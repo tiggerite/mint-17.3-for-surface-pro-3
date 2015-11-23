@@ -41,14 +41,19 @@ One final optional tweak is to change the wifi adapter to always have power mana
 
 ```
 mkdir -p /etc/pm/power.d
-sudo nano /etc/pm/power.d/wireless
+sudo nano /etc/pm/power.d/wifi_pwr_off
 ```
 
-And copy/paste the following into the file, before saving:
+And copy/paste the following into the file, before saving (Ctrl+X, Y):
 
 ```
 #!/bin/sh
-/sbin/iwconfig wlan0 power off
+/sbin/iwconfig mlan0 power off
+```
+
+Once saved:
+```
+chmod a+x /etc/pm/power.d/wifi_pwr_off
 ```
 
 You can now exit the chroot. Once control passes back to JLIVECD, be sure to enter "y" and enter the correct kernel version at the next prompt:
@@ -69,6 +74,6 @@ isohybrid --uefi linuxmint-17.3-cinnamon-x64-sp3-RC1.iso
 ```
 
 
-The link to the finished LiveCD on my Google Drive: (link to follow)
+The link to the final LiveCD on my Google Drive: https://drive.google.com/file/d/0B0E-zt0RT0Y_eVVfS1FBZVg3TjQ/view?usp=sharing
 
 The folder for the compiled kernel debs and linux-firmware_1.127.18_all.deb on my Google Drive: https://drive.google.com/folderview?id=0B0E-zt0RT0Y_ZkktbXU4QUtIZUE&usp=sharing
