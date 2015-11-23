@@ -11,7 +11,7 @@
  		 */
 -		if (atomic_read(&adapter->rx_pending) >= HIGH_RX_PENDING &&
 -		    adapter->iface_type != MWIFIEX_USB) {
-+		if (atomic_read(&adapter->rx_pending) >= HIGH_RX_PENDING){
++		if (atomic_read(&adapter->rx_pending) >= HIGH_RX_PENDING) {
  			adapter->delay_main_work = true;
  			mwifiex_queue_rx_work(adapter);
  			break;

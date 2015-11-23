@@ -22,7 +22,7 @@
 +	/* Deal with URB_ZERO_PACKET - need one more td/trb */
 +	zero_length_needed = (urb->transfer_flags & URB_ZERO_PACKET)
 +	 && !(urb->transfer_buffer_length % usb_endpoint_maxp(&urb->ep->desc));
-+	if(zero_length_needed){
++	if (zero_length_needed) {
 +		num_trbs++;
 +		xhci_dbg(xhci, "Creating zero length td.\n");
 +	}
@@ -83,7 +83,7 @@
 +	/* Deal with URB_ZERO_PACKET - need one more td/trb */
 +	zero_length_needed = (urb->transfer_flags & URB_ZERO_PACKET)
 +	 && !(urb->transfer_buffer_length % usb_endpoint_maxp(&urb->ep->desc));
-+	if(zero_length_needed){
++	if (zero_length_needed) {
 +		num_trbs++;
 +		xhci_dbg(xhci, "Creating zero length td.\n");
 +	}
