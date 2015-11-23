@@ -1,0 +1,10 @@
+--- linux-3.19.0.old/drivers/acpi/sleep.c	2015-11-11 07:06:56.761357904 -0800
++++ linux-3.19.0/drivers/acpi/sleep.c	2015-11-11 07:07:53.424432633 -0800
+@@ -629,6 +629,7 @@
+ 
+ static int acpi_freeze_prepare(void)
+ {
++	acpi_enable_wakeup_devices(ACPI_STATE_S0);
+ 	acpi_enable_all_wakeup_gpes();
+ 	acpi_os_wait_events_complete();
+ 	enable_irq_wake(acpi_gbl_FADT.sci_interrupt);

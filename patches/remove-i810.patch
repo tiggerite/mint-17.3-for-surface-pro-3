@@ -1,0 +1,10 @@
+--- linux-3.19.old/debian.master/abi/3.19.0-31.36/amd64/generic.modules	2015-11-19 20:32:03.026197055 +0000
++++ linux-3.19/debian.master/abi/3.19.0-31.36/amd64/generic.modules	2015-11-19 20:32:18.798196289 +0000
+@@ -1493,7 +1493,6 @@
+ i7300_idle
+ i740fb
+ i7core_edac
+-i810
+ i82092
+ i82975x_edac
+ i8k

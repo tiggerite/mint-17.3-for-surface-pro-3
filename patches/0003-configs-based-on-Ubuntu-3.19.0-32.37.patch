@@ -1,0 +1,47 @@
+From 57f606759f0f77444932a42dd6320c22e5e1eccf Mon Sep 17 00:00:00 2001
+From: Kernel Drudge <kernel@gloin.ubuntu-ci>
+Date: Fri, 30 Oct 2015 19:25:11 +0000
+Subject: [PATCH 3/3] configs (based on Ubuntu-3.19.0-32.37)
+
+---
+ debian.master/config/amd64/config.flavour.generic  |  1 -
+ .../config/amd64/config.flavour.lowlatency         |  1 -
+ debian.master/config/arm64/config.common.arm64     |  1 +
+ debian.master/config/armhf/config.common.armhf     |  1 -
+ debian.master/config/config.common.ubuntu          | 42 ++--------------------
+ debian.master/config/i386/config.flavour.generic   |  1 -
+ .../config/i386/config.flavour.lowlatency          |  1 -
+ debian.master/config/powerpc/config.common.powerpc |  1 -
+ debian.master/config/ppc64el/config.common.ppc64el |  1 -
+ 9 files changed, 3 insertions(+), 47 deletions(-)
+
+diff --git a/debian.master/config/config.common.ubuntu b/debian.master/config/config.common.ubuntu
+index f92791f..7a09b84 100644
+@@ -421,6 +419,7 @@ CONFIG_ARM64_ERRATUM_824069=y
+ CONFIG_ARM64_ERRATUM_826319=y
+ CONFIG_ARM64_ERRATUM_827319=y
+ CONFIG_ARM64_ERRATUM_832075=y
++CONFIG_ARM64_ERRATUM_843419=y
+ CONFIG_ARM64_ERRATUM_845719=y
+ CONFIG_ARM64_PGTABLE_LEVELS=3
+ # CONFIG_ARM64_PTDUMP is not set
+@@ -4112,8 +4083,6 @@ CONFIG_MFD_DA9055=y
+ CONFIG_MFD_DA9063=y
+ CONFIG_MFD_DLN2=m
+ CONFIG_MFD_HI6421_PMIC=m
+-# CONFIG_MFD_INTEL_LPSS_ACPI is not set
+-# CONFIG_MFD_INTEL_LPSS_PCI is not set
+ CONFIG_MFD_INTEL_MSIC=y
+ CONFIG_MFD_JANZ_CMODIO=m
+ CONFIG_MFD_KEMPLD=m
+@@ -5547,6 +5512,7 @@ CONFIG_PPC_PERF_CTRS=y
+ CONFIG_PPC_PMAC32_PSURGE=y
+ CONFIG_PPC_PMAC64=y
+ CONFIG_PPC_POWERNV=y
++CONFIG_PPC_POWERNV_RTAS=y
+ CONFIG_PPC_PSERIES=y
+ CONFIG_PPC_QEMU_E500=y
+ CONFIG_PPC_RTAS_DAEMON=y
+-- 
+2.1.0
+

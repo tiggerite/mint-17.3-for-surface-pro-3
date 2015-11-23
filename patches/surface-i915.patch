@@ -1,0 +1,82 @@
+diff -Naur linux-3.19.0.old/drivers/gpu/drm/i915/i915_drv.c linux-3.19.0/drivers/gpu/drm/i915/i915_drv.c
+--- linux-3.19.0.old/drivers/gpu/drm/i915/i915_drv.c	2015-11-09 08:46:58.163756291 -0800
++++ linux-3.19.0/drivers/gpu/drm/i915/i915_drv.c	2015-11-10 02:50:33.366778855 -0800
+@@ -369,6 +369,30 @@
+ 	IVB_CURSOR_OFFSETS,
+ };
+ 
++static const struct intel_device_info intel_skylake_gt3_info = {
++	.is_skylake = 1,
++	.gen = 9, .num_pipes = 3,
++	.need_gfx_hws = 1, .has_hotplug = 1,
++	.ring_mask = RENDER_RING | BSD_RING | BLT_RING | VEBOX_RING | BSD2_RING,
++	.has_llc = 1,
++	.has_ddi = 1,
++	.has_fbc = 1,
++	GEN_DEFAULT_PIPEOFFSETS,
++	IVB_CURSOR_OFFSETS,
++};
++
++static const struct intel_device_info intel_broxton_info = {
++	.is_preliminary = 1,
++	.gen = 9,
++	.need_gfx_hws = 1, .has_hotplug = 1,
++	.ring_mask = RENDER_RING | BSD_RING | BLT_RING | VEBOX_RING,
++	.num_pipes = 3,
++	.has_ddi = 1,
++	.has_fbc = 1,
++	GEN_DEFAULT_PIPEOFFSETS,
++	IVB_CURSOR_OFFSETS,
++};
++
+ /*
+  * Make sure any device matches here are from most specific to most
+  * general.  For example, since the Quanta match is based on the subsystem
+@@ -400,7 +424,17 @@
+ 	INTEL_HSW_D_IDS(&intel_haswell_d_info), \
+ 	INTEL_HSW_M_IDS(&intel_haswell_m_info), \
+ 	INTEL_VLV_M_IDS(&intel_valleyview_m_info),	\
+-	INTEL_VLV_D_IDS(&intel_valleyview_d_info)
++	INTEL_VLV_D_IDS(&intel_valleyview_d_info),	\
++	INTEL_BDW_GT12M_IDS(&intel_broadwell_m_info),	\
++	INTEL_BDW_GT12D_IDS(&intel_broadwell_d_info),	\
++	INTEL_BDW_GT3M_IDS(&intel_broadwell_gt3m_info),	\
++	INTEL_BDW_GT3D_IDS(&intel_broadwell_gt3d_info),	\
++	INTEL_CHV_IDS(&intel_cherryview_info),	\
++	INTEL_SKL_GT1_IDS(&intel_skylake_info),	\
++	INTEL_SKL_GT2_IDS(&intel_skylake_info),	\
++	INTEL_SKL_GT3_IDS(&intel_skylake_gt3_info),	\
++	INTEL_SKL_GT4_IDS(&intel_skylake_gt3_info),	\
++	INTEL_BXT_IDS(&intel_broxton_info)
+ 
+ static const struct pci_device_id pciidlist[] = {		/* aka */
+ 	INTEL_PCI_IDS,
+diff -Naur linux-3.19.0.old/include/drm/i915_pciids.h linux-3.19.0/include/drm/i915_pciids.h
+--- linux-3.19.0.old/include/drm/i915_pciids.h	2015-11-09 08:47:07.256102244 -0800
++++ linux-3.19.0/include/drm/i915_pciids.h	2015-11-10 02:48:39.223191685 -0800
+@@ -278,12 +278,23 @@
+ #define INTEL_SKL_GT3_IDS(info) \
+ 	INTEL_VGA_DEVICE(0x1926, info), /* ULT GT3 */ \
+ 	INTEL_VGA_DEVICE(0x192B, info), /* Halo GT3 */ \
+-	INTEL_VGA_DEVICE(0x192A, info) /* SRV GT3 */ \
++	INTEL_VGA_DEVICE(0x192A, info)  /* SRV GT3 */ \
++
++#define INTEL_SKL_GT4_IDS(info) \
++	INTEL_VGA_DEVICE(0x1932, info), /* DT GT4 */ \
++	INTEL_VGA_DEVICE(0x193B, info), /* Halo GT4 */ \
++	INTEL_VGA_DEVICE(0x193D, info), /* WKS GT4 */ \
++	INTEL_VGA_DEVICE(0x193A, info)  /* SRV GT4 */
+ 
+ #define INTEL_SKL_IDS(info) \
+ 	INTEL_SKL_GT1_IDS(info), \
+ 	INTEL_SKL_GT2_IDS(info), \
+-	INTEL_SKL_GT3_IDS(info)
++	INTEL_SKL_GT3_IDS(info), \
++	INTEL_SKL_GT4_IDS(info)
+ 
++#define INTEL_BXT_IDS(info) \
++	INTEL_VGA_DEVICE(0x0A84, info), \
++	INTEL_VGA_DEVICE(0x1A84, info), \
++	INTEL_VGA_DEVICE(0x5A84, info)
+ 
+ #endif /* _I915_PCIIDS_H */
