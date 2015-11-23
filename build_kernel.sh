@@ -1,6 +1,6 @@
 # download sources
-wget --limit-rate=600k --quiet https://launchpad.net/ubuntu/+archive/primary/+files/linux_3.19.0.orig.tar.gz
-wget --limit-rate=600k --quiet https://launchpad.net/ubuntu/+archive/primary/+files/linux_3.19.0-32.37.diff.gz
+wget --quiet https://launchpad.net/ubuntu/+archive/primary/+files/linux_3.19.0.orig.tar.gz
+wget --quiet https://launchpad.net/ubuntu/+archive/primary/+files/linux_3.19.0-32.37.diff.gz
 
 # decompress
 tar xf linux_3.19.0.orig.tar.gz
