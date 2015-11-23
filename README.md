@@ -21,6 +21,8 @@ cp mwifiex-firmware/mrvl/* ~/mylivecd/edit/tmp/mrvl/
 Now you need to install the debs and copy the Marvell firmware files that you just downloaded. In the chroot terminal:
 
 ```
+rm /initrd.img
+rm /vmlinuz
 cd /tmp
 dpkg -i *.deb
 mkdir -p /lib/firmware/mrvl/  
