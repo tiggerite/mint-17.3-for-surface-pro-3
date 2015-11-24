@@ -4,7 +4,9 @@ Here are the scripts and patches necessary to build the kernel from the customiz
 
 To compile, simply run ./build_kernel.sh - it takes about an hour and 15 minutes on my SP3 i7.
 
-If you then want to make your own LiveCD, firstly download and install JLIVECD from https://github.com/neurobin/JLIVECD and run JLstart.
+If you then want to make your own LiveCD, firstly download the ISO file from http://blog.linuxmint.com/?p=2938.
+
+Next, download and install JLIVECD from https://github.com/neurobin/JLIVECD and run JLstart.
 
 Go through the prompts using defaults (I use ~/mylivecd as folder), then when the chroot has launched in a new terminal, copy the compiled debs into ~/mylivecd/edit/tmp.
 
