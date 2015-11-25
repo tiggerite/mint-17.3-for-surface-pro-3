@@ -2,7 +2,7 @@ Linux Mint 17.3 (RC1/BETA) for the Surface Pro 3
 
 Here are the scripts and patches necessary to build the kernel from the customized LiveCD that is on my Google Drive (links below).
 
-To compile, simply run ./build_kernel.sh - it takes about an hour and 15 minutes on my SP3 i7.
+To compile, simply run ./build_kernel.sh - it takes about an hour on my SP3 i7.
 
 If you then want to make your own LiveCD, firstly download the ISO file from http://blog.linuxmint.com/?p=2938.
 
@@ -78,6 +78,6 @@ isohybrid --uefi linuxmint-17.3-cinnamon-x64-sp3-RC1.iso
 ```
 
 
-The link to the final LiveCD on my Google Drive: https://drive.google.com/file/d/0B0E-zt0RT0Y_eVVfS1FBZVg3TjQ/view?usp=sharing
+The link to the final LiveCD on my Google Drive: https://drive.google.com/file/d/0B0E-zt0RT0Y_TTFhWGktdTdqa0k/view?usp=sharing
 
 The folder for the compiled kernel debs and linux-firmware_1.127.18_all.deb on my Google Drive: https://drive.google.com/folderview?id=0B0E-zt0RT0Y_ZkktbXU4QUtIZUE&usp=sharing
