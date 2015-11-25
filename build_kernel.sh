@@ -1,6 +1,6 @@
 # download sources
-wget --quiet https://launchpad.net/ubuntu/+archive/primary/+files/linux_3.19.0.orig.tar.gz
-wget --quiet https://launchpad.net/ubuntu/+archive/primary/+files/linux_3.19.0-32.37.diff.gz
+wget https://launchpad.net/ubuntu/+archive/primary/+files/linux_3.19.0.orig.tar.gz
+wget https://launchpad.net/ubuntu/+archive/primary/+files/linux_3.19.0-32.37.diff.gz
 
 # decompress
 tar xf linux_3.19.0.orig.tar.gz
@@ -13,12 +13,14 @@ patch -p1 --ignore-whitespace -i ../patches/0003-configs-based-on-Ubuntu-3.19.0-
 patch -p1 --ignore-whitespace -i ../patches/0001-block-cgroups-kconfig-build-bits-for-BFQ-v7r8-3.19.0.patch
 patch -p1 --ignore-whitespace -i ../patches/0002-block-introduce-the-BFQ-v7r8-I-O-sched-for-3.19.0.patch
 patch -p1 --ignore-whitespace -i ../patches/0003-block-bfq-add-Early-Queue-Merge-EQM-to-BFQ-v7r8-for-3.19.0.patch
-patch -p1 --ignore-whitespace -i ../patches/3.19-sched-bfs-461.patch
-patch -p1 --ignore-whitespace -i ../patches/bfs462-rtmn-fix.patch
+patch -p1 --ignore-whitespace -i ../patches/bfq-config.patch
+#patch -p1 --ignore-whitespace -i ../patches/3.19-sched-bfs-461.patch
+#patch -p1 --ignore-whitespace -i ../patches/bfs462-rtmn-fix.patch
+#patch -p1 --ignore-whitespace -i ../patches/bfs-config.patch
+#patch -p1 --ignore-whitespace -i ../patches/remove-i810.patch
 patch -p1 --ignore-whitespace -i ../patches/version.patch
-patch -p1 --ignore-whitespace -i ../patches/remove-i810.patch
-patch -p1 --ignore-whitespace -i ../patches/surface-config.patch
 patch -p1 --ignore-whitespace -i ../patches/surface-button-cam.patch
+patch -p1 --ignore-whitespace -i ../patches/surface-config.patch
 patch -p1 --ignore-whitespace -i ../patches/surface-sleep.patch
 patch -p1 --ignore-whitespace -i ../patches/surface-battery.patch
 #patch -p1 --ignore-whitespace -i ../patches/surface-i915.patch
