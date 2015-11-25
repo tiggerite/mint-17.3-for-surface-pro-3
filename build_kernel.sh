@@ -23,7 +23,7 @@ patch -p1 --ignore-whitespace -i ../patches/surface-button-cam.patch
 patch -p1 --ignore-whitespace -i ../patches/surface-config.patch
 patch -p1 --ignore-whitespace -i ../patches/surface-sleep.patch
 patch -p1 --ignore-whitespace -i ../patches/surface-battery.patch
-patch -p1 --ignore-whitespace -i ../patches/surface-screen.patch
+patch -p0 --ignore-whitespace -i ../patches/surface-screen.patch
 #patch -p1 --ignore-whitespace -i ../patches/surface-i915.patch
 patch -p1 --ignore-whitespace -i ../patches/mwifiex-0001.patch
 patch -p1 --ignore-whitespace -i ../patches/mwifiex-0002.patch
