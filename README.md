@@ -4,7 +4,7 @@ Here are the scripts and patches necessary to build the kernel from the customiz
 
 To compile, simply run ./build_kernel.sh - it takes about an hour on my SP3 i7.
 
-If you then want to make your own LiveCD, firstly download the ISO file from (link to follow, as www.linuxmint.com site currently offline; I downloaded from a mirror).
+If you then want to make your own LiveCD, firstly download the ISO file from a mirror, e.g. http://www.mirrorservice.org/sites/www.linuxmint.com/pub/linuxmint.com//stable/17.3/linuxmint-17.3-cinnamon-64bit.iso
 
 Next, download and install JLIVECD from https://github.com/neurobin/JLIVECD and run JLstart.
 
