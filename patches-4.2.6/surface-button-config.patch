@@ -1,0 +1,11 @@
+diff -Naur linux-3.19.old/debian.master/config/config.common.ubuntu linux-3.19/debian.master/config/config.common.ubuntu
+--- linux-3.19.old/debian.master/config/config.common.ubuntu	2015-11-25 09:24:12.387554000 +0000
++++ linux-3.19/debian.master/config/config.common.ubuntu	2015-11-25 09:25:55.116554000 +0000
+@@ -7182,6 +7185,7 @@
+ CONFIG_SUNRPC_XPRT_RDMA_CLIENT=m
+ CONFIG_SUNRPC_XPRT_RDMA_SERVER=m
+ CONFIG_SUN_PARTITION=y
++CONFIG_SURFACE_PRO3_BUTTON=m
+ CONFIG_SUSPEND=y
+ CONFIG_SUSPEND_FREEZER=y
+ CONFIG_SWAP=y

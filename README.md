@@ -1,10 +1,10 @@
-Linux Mint 17.3 (RC1/BETA) for the Surface Pro 3
+Linux Mint 17.3 for the Surface Pro 3
 
 Here are the scripts and patches necessary to build the kernel from the customized LiveCD that is on my Google Drive (links below).
 
 To compile, simply run ./build_kernel.sh - it takes about an hour on my SP3 i7.
 
-If you then want to make your own LiveCD, firstly download the ISO file from http://blog.linuxmint.com/?p=2938.
+If you then want to make your own LiveCD, firstly download the ISO file from (link to follow, as www.linuxmint.com site currently offline; I downloaded from a mirror).
 
 Next, download and install JLIVECD from https://github.com/neurobin/JLIVECD and run JLstart.
 
@@ -72,12 +72,15 @@ Now let JLIVECD finish, but delete the generated ISO file, as you need to genera
 
 ```
 cd ~/mylivecd/extracted
-mkisofs -U -A "LinuxMint_64" -V "LinuxMint_64" -volset "LinuxMint_64" -J -joliet-long -r -v -T -o "../linuxmint-17.3-cinnamon-x64-sp3-RC1.iso" -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e boot/grub/efi.img -no-emul-boot .
+mkisofs -U -A "LinuxMint_64" -V "LinuxMint_64" -volset "LinuxMint_64" -J -joliet-long -r -v -T -o "../linuxmint-17.3-cinnamon-x64-sp3.iso" -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e boot/grub/efi.img -no-emul-boot .
 cd ..
-isohybrid --uefi linuxmint-17.3-cinnamon-x64-sp3-RC1.iso
+isohybrid --uefi linuxmint-17.3-cinnamon-x64-sp3.iso
 ```
 
 
-The link to the final LiveCD on my Google Drive: https://drive.google.com/file/d/0B0E-zt0RT0Y_TTFhWGktdTdqa0k/view?usp=sharing
+The link to the final LiveCD on my Google Drive: https://drive.google.com/file/d/0B0E-zt0RT0Y_V19DWHRGWmw0YW8/view?usp=sharing
 
-The folder for the compiled kernel debs and linux-firmware_1.127.18_all.deb on my Google Drive: https://drive.google.com/folderview?id=0B0E-zt0RT0Y_ZkktbXU4QUtIZUE&usp=sharing
+The folder for the compiled 3.19.0-32.37 kernel debs and linux-firmware_1.127.18_all.deb on my Google Drive: https://drive.google.com/folderview?id=0B0E-zt0RT0Y_ZkktbXU4QUtIZUE&usp=sharing
+
+I have also created patches and a build script for a 4.2.0-17.21 kernel, with backports from 4.4-rc3 for LPSS and PXA2XX. The folder for the compiled debs is at https://drive.google.com/folderview?id=0B0E-zt0RT0Y_TElxbHN6R1d2V3M&usp=sharing
+
