@@ -15,6 +15,7 @@ patch -p1 --ignore-whitespace -i ../patches-4.2.6/0003-block-bfq-add-Early-Queue
 patch -p1 --ignore-whitespace -i ../patches-4.2.6/bfq-config.patch
 patch -p1 --ignore-whitespace -i ../patches-4.2.6/mwifiex-0001.patch
 patch -p1 --ignore-whitespace -i ../patches-4.2.6/mwifiex-0002.patch
+patch -p1 --ignore-whitespace -i ../patches-4.2.6/surface-lid.patch
 patch -p1 --ignore-whitespace -i ../patches-4.2.6/surface-touchpad.patch
 patch -p1 --ignore-whitespace -i ../patches-4.2.6/surface-button-cam.patch
 patch -p1 --ignore-whitespace -i ../patches-4.2.6/surface-button-config.patch

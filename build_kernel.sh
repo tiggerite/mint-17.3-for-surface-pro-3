@@ -19,6 +19,7 @@ patch -p1 --ignore-whitespace -i ../patches/bfq-config.patch
 #patch -p1 --ignore-whitespace -i ../patches/bfs-config.patch
 #patch -p1 --ignore-whitespace -i ../patches/remove-i810.patch
 patch -p1 --ignore-whitespace -i ../patches/version.patch
+patch -p1 --ignore-whitespace -i ../patches/surface-lid.patch
 patch -p1 --ignore-whitespace -i ../patches/surface-button-cam.patch
 patch -p1 --ignore-whitespace -i ../patches/surface-config.patch
 patch -p1 --ignore-whitespace -i ../patches/surface-sleep.patch
