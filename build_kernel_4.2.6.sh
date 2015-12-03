@@ -36,4 +36,4 @@ chmod a+x debian/scripts/misc/*
 # compile kernel
 fakeroot debian/rules clean
 sed -i 's/4.2.0-19.23)/4.2.0-19.23~14.04.3)/g' debian/changelog
-#fakeroot debian/rules binary-headers binary-generic
+fakeroot debian/rules binary-headers binary-generic
