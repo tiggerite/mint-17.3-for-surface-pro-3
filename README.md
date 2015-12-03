@@ -82,5 +82,5 @@ The link to the final LiveCD on my Google Drive: https://drive.google.com/file/d
 
 The folder for the compiled 3.19.0-32.37 kernel debs and linux-firmware_1.127.18_all.deb on my Google Drive: https://drive.google.com/folderview?id=0B0E-zt0RT0Y_ZkktbXU4QUtIZUE&usp=sharing
 
-I have also created patches and a build script for a 4.2.0-19.23 kernel, with backports from 4.4-rc3 for LPSS and PXA2XX. The folder for the compiled debs is at https://drive.google.com/folderview?id=0B0E-zt0RT0Y_TElxbHN6R1d2V3M&usp=sharing
+I have also created patches and a build script for a 4.2.0-19.23 kernel, with some backports such as LPSS by Ubuntu, and minor pinctrl fixes from 4-4rc3. The folder for the compiled debs is at https://drive.google.com/folderview?id=0B0E-zt0RT0Y_TElxbHN6R1d2V3M&usp=sharing
 
