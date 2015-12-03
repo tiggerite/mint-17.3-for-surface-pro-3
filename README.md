@@ -45,7 +45,7 @@ One final optional tweak is to change the wifi adapter to always have power mana
 
 ```
 mkdir -p /etc/pm/power.d
-sudo nano /etc/pm/power.d/wifi_pwr_off
+nano /etc/pm/power.d/wifi_pwr_off
 ```
 
 And copy/paste the following into the file, before saving (Ctrl+X, Y):
@@ -72,9 +72,9 @@ Now let JLIVECD finish, but delete the generated ISO file, as you need to genera
 
 ```
 cd ~/mylivecd/extracted
-mkisofs -U -A "LinuxMint_64" -V "LinuxMint_64" -volset "LinuxMint_64" -J -joliet-long -r -v -T -o "../linuxmint-17.3-cinnamon-x64-sp3.iso" -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e boot/grub/efi.img -no-emul-boot .
+sudo mkisofs -U -A "LinuxMint_64" -V "LinuxMint_64" -volset "LinuxMint_64" -J -joliet-long -r -v -T -o "../linuxmint-17.3-cinnamon-x64-sp3.iso" -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e boot/grub/efi.img -no-emul-boot .
 cd ..
-isohybrid --uefi linuxmint-17.3-cinnamon-x64-sp3.iso
+sudo isohybrid --uefi linuxmint-17.3-cinnamon-x64-sp3.iso
 ```
 
 
@@ -82,5 +82,5 @@ The link to the final LiveCD on my Google Drive: https://drive.google.com/file/d
 
 The folder for the compiled 3.19.0-32.37 kernel debs and linux-firmware_1.127.18_all.deb on my Google Drive: https://drive.google.com/folderview?id=0B0E-zt0RT0Y_ZkktbXU4QUtIZUE&usp=sharing
 
-I have also created patches and a build script for a 4.2.0-17.21 kernel, with backports from 4.4-rc3 for LPSS and PXA2XX. The folder for the compiled debs is at https://drive.google.com/folderview?id=0B0E-zt0RT0Y_TElxbHN6R1d2V3M&usp=sharing
+I have also created patches and a build script for a 4.2.0-19.23 kernel, with backports from 4.4-rc3 for LPSS and PXA2XX. The folder for the compiled debs is at https://drive.google.com/folderview?id=0B0E-zt0RT0Y_TElxbHN6R1d2V3M&usp=sharing
 
