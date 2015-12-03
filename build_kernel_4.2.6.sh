@@ -25,7 +25,8 @@ patch -p1 --ignore-whitespace -i ../patches-4.2.6/spi-pxa.patch
 patch -p1 --ignore-whitespace -i ../patches-4.2.6/lpss.patch
 patch -p1 --ignore-whitespace -i ../patches-4.2.6/lpss-config.patch
 patch -p1 --ignore-whitespace -i ../patches-4.2.6/pinctrl.patch
-patch -p1 --ignore-whitespace -i ../patches-4.2.6/pinctrl-config.patch
+#patch -p1 --ignore-whitespace -i ../patches-4.2.6/pinctrl-broxton.patch
+#patch -p1 --ignore-whitespace -i ../patches-4.2.6/pinctrl-broxton-config.patch
 patch -p1 --ignore-whitespace -i ../patches-4.2.6/version.patch
 sed -i 's/4.2.6-040206.201511091832)/4.2.0-17.21~14.04.3)/g' debian.master/changelog
 
