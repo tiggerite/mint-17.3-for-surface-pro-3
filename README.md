@@ -28,6 +28,10 @@ apt-get update
 apt-get install gcc-4.9 g++-4.9 cpp-4.9
 update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 20
 update-alternatives --config gcc
+update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.9 20
+update-alternatives --config g++
+update-alternatives --install /usr/bin/cpp cpp /usr/bin/cpp-4.9 20
+update-alternatives --config cpp
 gcc --version
 ```
 
