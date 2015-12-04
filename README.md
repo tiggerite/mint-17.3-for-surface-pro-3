@@ -50,6 +50,15 @@ rm -Rf mrvl
 
 When installing the 4.2.0-19 kernel-image debs, although the virtualbox module will now build without a hitch, the ndiswrapper one will not, causing the system to spit out a warning. As you have downloaded the Surface wifi drivers and integrated them into the kernel, ndiswrapper isn't needed, and this can be safely ignored.
 
+Now, let's tidy up the ISO image by removing the bundled version:
+
+```
+apt-get purge linux-headers-3.19.0-32
+apt-get purge linux-image-3.19.0-32-generic
+```
+
+Removing these should remove the other two related packages, namely linux-headers-3.19.0-32-generic and linux-image-extra-3.19.0-32-generic.
+
 Optionally, you can now install blueman to have a better Bluetooth manager:
 
 ```
