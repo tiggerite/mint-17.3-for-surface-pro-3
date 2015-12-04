@@ -95,7 +95,7 @@ sudo isohybrid --uefi linuxmint-17.3-cinnamon-x64-sp3.iso
 ```
 
 
-The link to the final LiveCD on my Google Drive: https://drive.google.com/file/d/0B0E-zt0RT0Y_V19DWHRGWmw0YW8/view?usp=sharing
+The link to the final LiveCD on my Google Drive: https://drive.google.com/file/d/0B0E-zt0RT0Y_azVWU0JqRTRYZXc/view?usp=sharing
 
 The folder for the compiled 4.2.0-19.23 kernel debs and linux-firmware_1.127.18_all.deb on my Google Drive: https://drive.google.com/folderview?id=0B0E-zt0RT0Y_TElxbHN6R1d2V3M&usp=sharing
 
