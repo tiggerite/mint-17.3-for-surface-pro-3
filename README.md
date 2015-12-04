@@ -2,7 +2,7 @@ Linux Mint 17.3 for the Surface Pro 3
 
 Here are the scripts and patches necessary to build the kernel from the customized LiveCD that is on my Google Drive (links below).
 
-To compile, simply run ./build_kernel.sh - it takes about an hour on my SP3 i7.
+To compile, simply run ./build_kernel_4.2.6.sh - it takes about an hour on my SP3 i7.
 
 If you then want to make your own LiveCD, firstly download the ISO file from a mirror, e.g. http://www.mirrorservice.org/sites/www.linuxmint.com/pub/linuxmint.com//stable/17.3/linuxmint-17.3-cinnamon-64bit.iso
 
@@ -12,7 +12,7 @@ Go through the prompts using defaults (I use ~/mylivecd as folder), then when th
 
 You will also need the linux-firmware_1.127.18_all.deb from http://packages.ubuntu.com/trusty/all/linux-firmware/download or my Google Drive, copy that to the same location.
 
-Finally for Bluetooth to work you will need to run:
+Then for Bluetooth to work you will need to run:
 
 ```
 git clone git://git.marvell.com/mwifiex-firmware.git  
@@ -20,7 +20,18 @@ mkdir ~/mylivecd/edit/tmp/mrvl
 cp mwifiex-firmware/mrvl/* ~/mylivecd/edit/tmp/mrvl/
 ```
 
-Now you need to install the debs and copy the Marvell firmware files that you just downloaded. In the chroot terminal:
+Finally, when you install the new kernel, because the version is different the virtualbox dkms module will automatically be rebuilt. However, this needs gcc 4.9, but the LiveCD only has 4.8 by default. So, to install gcc-4.9:
+
+```
+add-apt-repository ppa:ubuntu-toolchain-r/test
+apt-get update
+apt-get install gcc-4.9 g++-4.9 cpp-4.9
+update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 20
+update-alternatives --config gcc
+gcc --version
+```
+
+Now you can install the new kernel and copy the Marvell firmware files that you downloaded earlier. In the chroot terminal:
 
 ```
 rm /initrd.img
@@ -32,6 +43,8 @@ cp mrvl/* /lib/firmware/mrvl/
 rm *.deb
 rm -Rf mrvl
 ```
+
+When installing the 4.2.0-19 kernel-image debs, although the virtualbox module will now build without a hitch, the ndiswrapper one will not, causing the system to spit out a warning. As you have downloaded the Surface wifi drivers and integrated them into the kernel, ndiswrapper isn't needed, and this can be safely ignored.
 
 Optionally, you can now install blueman to have a better Bluetooth manager:
 
@@ -65,7 +78,7 @@ You can now exit the chroot. Once control passes back to JLIVECD, be sure to ent
 ```
 ......have you installed new kernel and want to boot the new kernel in live cd/dvd: (y/n)?
 
-......Enter the kernel version (take your time on this one): 3.19.0-32-generic
+......Enter the kernel version (take your time on this one): 4.2.0-19-generic
 ```
 
 Now let JLIVECD finish, but delete the generated ISO file, as you need to generate it differently for UEFI support. You can substitute linuxmint-17.3-cinnamon-x64-sp3-RC1.iso in both commands with whatever you choose, as long as they match.
@@ -80,7 +93,5 @@ sudo isohybrid --uefi linuxmint-17.3-cinnamon-x64-sp3.iso
 
 The link to the final LiveCD on my Google Drive: https://drive.google.com/file/d/0B0E-zt0RT0Y_V19DWHRGWmw0YW8/view?usp=sharing
 
-The folder for the compiled 3.19.0-32.37 kernel debs and linux-firmware_1.127.18_all.deb on my Google Drive: https://drive.google.com/folderview?id=0B0E-zt0RT0Y_ZkktbXU4QUtIZUE&usp=sharing
-
-I have also created patches and a build script for a 4.2.0-19.23 kernel, with some backports such as LPSS by Ubuntu, and minor pinctrl fixes from 4-4rc3. The folder for the compiled debs is at https://drive.google.com/folderview?id=0B0E-zt0RT0Y_TElxbHN6R1d2V3M&usp=sharing
+The folder for the compiled 4.2.0-19.23 kernel debs and linux-firmware_1.127.18_all.deb on my Google Drive: https://drive.google.com/folderview?id=0B0E-zt0RT0Y_TElxbHN6R1d2V3M&usp=sharing
 
