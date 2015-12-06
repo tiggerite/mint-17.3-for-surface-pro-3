@@ -19,13 +19,15 @@ patch -p1 --ignore-whitespace -i ../patches/surface-touchpad.patch
 patch -p1 --ignore-whitespace -i ../patches/surface-button-cam.patch
 patch -p1 --ignore-whitespace -i ../patches/surface-button-config.patch
 patch -p1 --ignore-whitespace -i ../patches/surface-lid.patch
+patch -p1 --ignore-whitespace -i ../patches/surface-touchscreen.patch
 patch -p1 --ignore-whitespace -i ../patches/acpi-scan.patch
 patch -p1 --ignore-whitespace -i ../patches/acpi-osl.patch
-#patch -p1 --ignore-whitespace -i ../patches/spi-pxa.patch
+patch -p1 --ignore-whitespace -i ../patches/spi-pxa.patch
 patch -p1 --ignore-whitespace -i ../patches/pinctrl.patch
-#patch -p1 --ignore-whitespace -i ../patches/pinctrl-broxton.patch
-#patch -p1 --ignore-whitespace -i ../patches/pinctrl-broxton-config.patch
-#patch -p1 --ignore-whitespace -i ../patches/lpss-broxton.patch
+patch -p1 --ignore-whitespace -i ../patches/pinctrl-broxton.patch
+patch -p1 --ignore-whitespace -i ../patches/pinctrl-broxton-config.patch
+patch -p1 --ignore-whitespace -i ../patches/lpss-broxton.patch
+patch -p1 --ignore-whitespace -i ../patches/lpss-non-acpi.patch
 patch -p1 --ignore-whitespace -i ../patches/version.patch
 
 # update execute flags

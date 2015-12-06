@@ -1,0 +1,80 @@
+--- linux-4.2.old/drivers/hid/hid-ids.h	2015-12-06 17:27:02.044661444 +0000
++++ linux-4.2/drivers/hid/hid-ids.h	2015-12-06 17:27:14.188662056 +0000
+@@ -713,6 +713,7 @@
+ #define USB_DEVICE_ID_NOVATEK_MOUSE	0x1602
+ 
+ #define USB_VENDOR_ID_NTRIG		0x1b96
++#define I2C_DEVICE_ID_NTRIG_TOUCH_SCREEN   0x1B05
+ #define USB_DEVICE_ID_NTRIG_TOUCH_SCREEN   0x0001
+ #define USB_DEVICE_ID_NTRIG_TOUCH_SCREEN_1   0x0003
+ #define USB_DEVICE_ID_NTRIG_TOUCH_SCREEN_2   0x0004
+--- linux-4.2.old/drivers/hid/hid-multitouch.c	2015-12-06 17:27:07.412661715 +0000
++++ linux-4.2/drivers/hid/hid-multitouch.c	2015-12-06 17:29:24.852668638 +0000
+@@ -67,6 +67,7 @@
+ #define MT_QUIRK_HOVERING		(1 << 11)
+ #define MT_QUIRK_CONTACT_CNT_ACCURATE	(1 << 12)
+ #define MT_QUIRK_FORCE_GET_FEATURE	(1 << 13)
++#define MT_QUIRK_INVALID_CONTACTID_FFFF	(1 << 14)
+ 
+ #define MT_INPUTMODE_TOUCHSCREEN	0x02
+ #define MT_INPUTMODE_TOUCHPAD		0x03
+@@ -155,6 +156,7 @@
+ #define MT_CLS_GENERALTOUCH_TWOFINGERS		0x0108
+ #define MT_CLS_GENERALTOUCH_PWT_TENFINGERS	0x0109
+ #define MT_CLS_VTL				0x0110
++#define MT_CLS_NTRIG				0x0111
+ 
+ #define MT_DEFAULT_MAXCONTACT	10
+ #define MT_MAX_MAXCONTACT	250
+@@ -265,6 +267,11 @@
+ 			MT_QUIRK_CONTACT_CNT_ACCURATE |
+ 			MT_QUIRK_FORCE_GET_FEATURE,
+ 	},
++	{ .name = MT_CLS_NTRIG,
++		.quirks	= MT_QUIRK_NOT_SEEN_MEANS_UP |
++			MT_QUIRK_ALWAYS_VALID |
++			MT_QUIRK_INVALID_CONTACTID_FFFF,
++	},
+ 	{ }
+ };
+ 
+@@ -546,6 +553,10 @@
+ 	if (quirks & MT_QUIRK_SLOT_IS_CONTACTID_MINUS_ONE)
+ 		return td->curdata.contactid - 1;
+ 
++	if ((quirks & MT_QUIRK_INVALID_CONTACTID_FFFF) &&
++	    td->curdata.contactid == 0xffff)
++		return -1;
++
+ 	return input_mt_get_slot_by_key(input, td->curdata.contactid);
+ }
+ 
+@@ -564,7 +575,14 @@
+ 		struct mt_slot *s = &td->curdata;
+ 		struct input_mt *mt = input->mt;
+ 
+-		if (slotnum < 0 || slotnum >= td->maxcontacts)
++		if (slotnum < 0) {
++			if ((td->mtclass.quirks & MT_QUIRK_INVALID_CONTACTID_FFFF) &&
++			    td->curdata.contactid == 0xffff)
++				td->num_received++;
++			return;
++		}
++
++		if (slotnum >= td->maxcontacts)
+ 			return;
+ 
+ 		if ((td->mtclass.quirks & MT_QUIRK_IGNORE_DUPLICATES) && mt) {
+@@ -1302,6 +1320,12 @@
+ 		MT_USB_DEVICE(USB_VENDOR_ID_TURBOX,
+ 			USB_DEVICE_ID_TURBOX_TOUCHSCREEN_MOSART) },
+ 
++	/* N-trig */
++	{ .driver_data = MT_CLS_NTRIG,
++		HID_DEVICE(BUS_I2C, HID_GROUP_MULTITOUCH_WIN_8,
++			USB_VENDOR_ID_NTRIG,
++			I2C_DEVICE_ID_NTRIG_TOUCH_SCREEN) },
++
+ 	/* Panasonic panels */
+ 	{ .driver_data = MT_CLS_PANASONIC,
+ 		MT_USB_DEVICE(USB_VENDOR_ID_PANASONIC,
