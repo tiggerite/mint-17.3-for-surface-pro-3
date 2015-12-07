@@ -9,7 +9,7 @@
  #define USB_DEVICE_ID_NTRIG_TOUCH_SCREEN_1   0x0003
  #define USB_DEVICE_ID_NTRIG_TOUCH_SCREEN_2   0x0004
 --- linux-4.2.old/drivers/hid/hid-multitouch.c	2015-12-06 17:27:07.412661715 +0000
-+++ linux-4.2/drivers/hid/hid-multitouch.c	2015-12-06 17:29:24.852668638 +0000
++++ linux-4.2/drivers/hid/hid-multitouch.c	2015-12-07 15:38:36.470953643 +0000
 @@ -67,6 +67,7 @@
  #define MT_QUIRK_HOVERING		(1 << 11)
  #define MT_QUIRK_CONTACT_CNT_ACCURATE	(1 << 12)
@@ -26,18 +26,21 @@
  
  #define MT_DEFAULT_MAXCONTACT	10
  #define MT_MAX_MAXCONTACT	250
-@@ -265,6 +267,10 @@
+@@ -265,6 +267,13 @@
  			MT_QUIRK_CONTACT_CNT_ACCURATE |
  			MT_QUIRK_FORCE_GET_FEATURE,
  	},
 +	{ .name = MT_CLS_NTRIG,
 +		.quirks	= MT_QUIRK_ALWAYS_VALID |
++			MT_QUIRK_IGNORE_DUPLICATES |
++			MT_QUIRK_HOVERING |
++			MT_QUIRK_CONTACT_CNT_ACCURATE |
 +			MT_QUIRK_INVALID_CONTACTID_FFFF,
 +	},
  	{ }
  };
  
-@@ -546,6 +552,10 @@
+@@ -546,6 +555,10 @@
  	if (quirks & MT_QUIRK_SLOT_IS_CONTACTID_MINUS_ONE)
  		return td->curdata.contactid - 1;
  
@@ -48,7 +51,7 @@
  	return input_mt_get_slot_by_key(input, td->curdata.contactid);
  }
  
-@@ -564,7 +574,14 @@
+@@ -564,7 +577,14 @@
  		struct mt_slot *s = &td->curdata;
  		struct input_mt *mt = input->mt;
  
@@ -64,7 +67,7 @@
  			return;
  
  		if ((td->mtclass.quirks & MT_QUIRK_IGNORE_DUPLICATES) && mt) {
-@@ -1302,6 +1319,12 @@
+@@ -1302,6 +1322,12 @@
  		MT_USB_DEVICE(USB_VENDOR_ID_TURBOX,
  			USB_DEVICE_ID_TURBOX_TOUCHSCREEN_MOSART) },
  
