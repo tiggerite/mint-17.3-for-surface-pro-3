@@ -104,7 +104,7 @@ if __name__ == "__main__":
     
     global icon
     if hasAppIndicator:
-        icon = AppIndicator.Indicator.new("autobacklight", autolight, AppIndicator.IndicatorCategory.APPLICATION_STATUS)
+        icon = AppIndicator.Indicator.new("autobacklight", manlight, AppIndicator.IndicatorCategory.APPLICATION_STATUS)
         icon.set_status(AppIndicator.IndicatorStatus.ACTIVE)
         menu = Gtk.Menu()
         global toggle
@@ -116,7 +116,7 @@ if __name__ == "__main__":
 
         toggle.connect("activate", toggleAutolight)
     else:
-        icon = Gtk.StatusIcon.new_from_pixbuf(autolight)
+        icon = Gtk.StatusIcon.new_from_pixbuf(manlight)
         icon.connect("activate", toggleAutolight)
     
     GObject.idle_add(checkLight)
