@@ -1,0 +1,157 @@
+#!/usr/bin/python3
+
+#####CONFIGURATION#####
+sensorname="accel_3d"
+
+screens=[
+        "LVDS1",
+        "eDP1"
+        ]
+inputnames=[
+        "MICROSOFT SAM",
+        "NTRG0001:01 1B96:1B05"
+        ]
+
+#####PROGRAM CODE#####
+#Do not change unless you know what you are doing!
+
+xinput="/usr/bin/xinput"
+xrandr="/usr/bin/xrandr"
+
+resourcepaths=[
+	"./",
+	"/usr/share/autorotate/",
+	"/usr/local/share/autorotate/"
+	]
+
+orientations=[
+        "normal",
+        "inverted",
+        "left",
+        "right"
+        ]
+
+rotlock=False
+
+import pyudev
+import re
+import subprocess
+import os.path
+import signal
+from gi.repository import Gtk, GdkPixbuf, GObject
+
+hasAppIndicator = True
+try:
+    from gi.repository import AppIndicator3 as AppIndicator
+except:
+    hasAppIndicator = False
+
+def twos_comp(val):
+    if val & (1 << (16-1)) != 0:
+        val = val - (1 << 16)
+    return val
+
+def getOrientation(accelX, accelY, accelZ):
+    absAccelX = abs(accelX)
+    absAccelY = abs(accelY)
+    absAccelZ = abs(accelZ)
+
+    if absAccelZ > 4 * absAccelX and absAccelZ > 4 * absAccelY:
+        orientation = "flat"
+    elif 3 * absAccelY > 2 * absAccelX:
+        orientation = "inverted" if accelY > 0 else "normal"
+    else:
+        orientation = "left" if accelX > 0 else "right"
+
+    return orientation
+
+def rotate(orientation):
+    if orientation in orientations:
+        i = -1
+        for input_ in inputnames:
+            i += 1
+            pattern = re.compile(input_ + " *\tid=([0-9]+)\t")
+            output = subprocess.check_output([xinput, "list"]).decode("unicode_escape")
+            matches = re.findall(pattern, output)
+            if len(matches) > 0:
+                subprocess.call([xrandr, "--output", screens[i], "--rotate", orientation])
+                for id in matches:
+                    subprocess.call([xinput, "map-to-output", id, screens[i]])
+
+def toggleRotLock(event):
+    global rotlock
+    global icon
+    global lockrot
+    global unlockrot
+
+    rotlock = not rotlock
+    if hasAppIndicator:
+        global toggle
+        icon.set_icon(lockrot if rotlock else unlockrot)
+        toggle.set_label("Unlock Rotation" if rotlock else "Lock Rotation")
+    else:
+        icon.set_from_pixbuf(lockrot if rotlock else unlockrot)
+
+def checkRotation():
+    if not rotlock:
+        device = pyudev.Device.from_path(context, path)
+        accelX = twos_comp(int(device.attributes["in_accel_x_raw"]))
+        accelY = twos_comp(int(device.attributes["in_accel_y_raw"]))
+        accelZ = twos_comp(int(device.attributes["in_accel_z_raw"]))
+
+        orientation = getOrientation(accelX, accelY, accelZ)
+
+        global prevorientation
+        if orientation != prevorientation:
+            prevorientation = orientation
+            rotate(orientation)
+    GObject.timeout_add(1000, checkRotation)
+
+context = pyudev.Context()
+for device in context.list_devices(subsystem="iio").match_attribute("name", sensorname): break
+assert device
+
+path = device.device_path
+
+prevorientation = ""
+
+for resourcepath in resourcepaths[::-1]:
+    if os.path.isfile(resourcepath + "rotate_lock.png"):
+        if hasAppIndicator:
+            lockrot = resourcepath + "rotate_lock.png"
+        else:
+            lockrot = GdkPixbuf.Pixbuf.new_from_file(resourcepath + "rotate_lock.png")
+
+    if os.path.isfile(resourcepath + "rotate.png"):
+        if hasAppIndicator:
+            unlockrot = resourcepath + "rotate.png"
+        else:
+            unlockrot = GdkPixbuf.Pixbuf.new_from_file(resourcepath + "rotate.png")
+
+
+if __name__ == "__main__":
+    GObject.threads_init()
+
+    global icon
+    if hasAppIndicator:
+        icon = AppIndicator.Indicator.new("autorotate", unlockrot, AppIndicator.IndicatorCategory.APPLICATION_STATUS)
+        icon.set_status(AppIndicator.IndicatorStatus.ACTIVE)
+        menu = Gtk.Menu()
+        global toggle
+        toggle = Gtk.MenuItem("Lock Rotation")
+
+        menu.append(toggle)
+        icon.set_menu(menu)
+        toggle.show()
+
+        toggle.connect("activate", toggleRotLock)
+    else:
+        icon = Gtk.StatusIcon.new_from_pixbuf(unlockrot)
+        icon.connect("activate", toggleRotLock)
+
+    # Ctrl-c now kills the scipt
+    # https://bugzilla.gnome.org/show_bug.cgi?id=622084#c12
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+    GObject.idle_add(checkRotation)
+    Gtk.main()
