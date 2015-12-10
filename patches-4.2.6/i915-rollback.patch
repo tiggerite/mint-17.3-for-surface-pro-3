@@ -1,0 +1,18 @@
+--- linux-4.2.old/drivers/gpu/drm/i915/i915_drv.c	2015-12-03 19:09:25.201598999 +0000
++++ linux-4.2/drivers/gpu/drm/i915/i915_drv.c	2015-12-10 11:04:29.362487263 +0000
+@@ -356,6 +356,7 @@
+ };
+ 
+ static const struct intel_device_info intel_skylake_info = {
++	.is_preliminary = 1,
+ 	.is_skylake = 1,
+ 	.gen = 9, .num_pipes = 3,
+ 	.need_gfx_hws = 1, .has_hotplug = 1,
+@@ -368,6 +369,7 @@
+ };
+ 
+ static const struct intel_device_info intel_skylake_gt3_info = {
++	.is_preliminary = 1,
+ 	.is_skylake = 1,
+ 	.gen = 9, .num_pipes = 3,
+ 	.need_gfx_hws = 1, .has_hotplug = 1,
