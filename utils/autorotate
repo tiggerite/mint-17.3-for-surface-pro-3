@@ -3,13 +3,14 @@
 #####CONFIGURATION#####
 sensorname="accel_3d"
 
-screens=[
-        "LVDS1",
-        "eDP1"
-        ]
 inputnames=[
-        "MICROSOFT SAM",
+        "Atmel Atmel maXTouch Digitizer",
         "NTRG0001:01 1B96:1B05"
+        ]
+
+pennames=[
+        "MICROSOFT SAM",
+        "NTRG0001:01 1B96:1B05 Pen"
         ]
 
 #####PROGRAM CODE#####
@@ -31,6 +32,14 @@ orientations=[
         "right"
         ]
 
+matrices=[
+        [1,0,0,0,1,0,0,0,1],
+        [-1,0,1,0,-1,1,0,0,1],
+        [0,-1,1,1,0,0,0,0,1],
+        [0,1,0,-1,0,1,0,0,1]
+        ]
+
+firstrun=True
 rotlock=False
 
 import pyudev
@@ -51,6 +60,34 @@ def twos_comp(val):
         val = val - (1 << 16)
     return val
 
+def disableTouch(id):
+    subprocess.call([xinput, "disable", id])
+
+def enableTouch(id):
+    subprocess.call([xinput, "enable", id])
+
+def refreshTouch(id):
+    disableTouch(id)
+    enableTouch(id)
+
+def checkDisplays():
+    check_displays = "xrandr | grep -w 'connected'"
+    str_displays = str(subprocess.check_output(check_displays, shell=True).lower().rstrip())
+    list_displays = str_displays.splitlines()
+    int_displays = len(list_displays)
+    return int_displays
+
+def checkNumAxes(id):
+    check_num_axes = "xinput list-props " + id + " | grep 'Axis Labels' | cut -f3 | cut -d ',' -f1-4 --output-delimiter=$'\n'"
+    str_num_axes = str(subprocess.check_output(check_num_axes, shell=True).lower().rstrip())
+    list_num_axes = str_num_axes.splitlines()
+    int_num_axes = len(list_num_axes)
+    return int_num_axes
+
+def checkProximity(id):
+    stylusProximityCommand = 'xinput query-state ' + id + ' | grep Proximity | cut -d " " -f3 | cut -d "=" -f2'
+    return str(subprocess.check_output(stylusProximityCommand, shell=True).lower().rstrip())
+
 def getOrientation(accelX, accelY, accelZ):
     absAccelX = abs(accelX)
     absAccelY = abs(accelY)
@@ -65,18 +102,21 @@ def getOrientation(accelX, accelY, accelZ):
 
     return orientation
 
-def rotate(orientation):
-    if orientation in orientations:
-        i = -1
-        for input_ in inputnames:
-            i += 1
-            pattern = re.compile(input_ + " *\tid=([0-9]+)\t")
-            output = subprocess.check_output([xinput, "list"]).decode("unicode_escape")
-            matches = re.findall(pattern, output)
-            if len(matches) > 0:
-                subprocess.call([xrandr, "--output", screens[i], "--rotate", orientation])
-                for id in matches:
-                    subprocess.call([xinput, "map-to-output", id, screens[i]])
+def rotate(orientation, matrix):
+    i = -1
+    for input_ in inputnames:
+        i += 1
+        pattern = re.compile(input_ + " *\tid=([0-9]+)\t")
+        output = subprocess.check_output([xinput, "list"]).decode("unicode_escape")
+        matches = re.findall(pattern, output)
+        if len(matches) == 1:
+            subprocess.call([xrandr, "-o", orientation])
+            subprocess.call([xinput, "set-prop", matches[0], "Coordinate Transformation Matrix"] + [str(m) for m in matrix])
+            penpattern = re.compile(pennames[i] + " *\tid=([0-9]+)\t")
+            penmatches = re.findall(penpattern, output)
+            for id in penmatches:
+                subprocess.call([xinput, "set-prop", id, "Coordinate Transformation Matrix"] + [str(m) for m in matrix])
+            refreshTouch(matches[0])
 
 def toggleRotLock(event):
     global rotlock
@@ -94,18 +134,47 @@ def toggleRotLock(event):
 
 def checkRotation():
     if not rotlock:
-        device = pyudev.Device.from_path(context, path)
-        accelX = twos_comp(int(device.attributes["in_accel_x_raw"]))
-        accelY = twos_comp(int(device.attributes["in_accel_y_raw"]))
-        accelZ = twos_comp(int(device.attributes["in_accel_z_raw"]))
+        int_displays = checkDisplays()
+        orientation = "normal"
+        if int_displays == 1:
+            device = pyudev.Device.from_path(context, path)
+            accelX = twos_comp(int(device.attributes["in_accel_x_raw"]))
+            accelY = twos_comp(int(device.attributes["in_accel_y_raw"]))
+            accelZ = twos_comp(int(device.attributes["in_accel_z_raw"]))
 
-        orientation = getOrientation(accelX, accelY, accelZ)
+            orientation = getOrientation(accelX, accelY, accelZ)
 
         global prevorientation
         if orientation != prevorientation:
+            i = -1
             prevorientation = orientation
-            rotate(orientation)
+            for orientation_ in orientations:
+                i += 1
+                if orientation == orientation_:
+                    rotate(orientation, matrices[i])
     GObject.timeout_add(1000, checkRotation)
+
+def checkPalmReject():
+    i = -1
+    for input_ in inputnames:
+        i += 1
+        pattern = re.compile(input_ + " *\tid=([0-9]+)\t")
+        output = subprocess.check_output([xinput, "list"]).decode("unicode_escape")
+        matches = re.findall(pattern, output)
+        if len(matches) == 1:
+            penpattern = re.compile(pennames[i] + " *\tid=([0-9]+)\t")
+            penmatches = re.findall(penpattern, output)
+            for id in penmatches:
+                if checkNumAxes(id) == 3:
+                    stylusProximityStatus = checkProximity(id)
+                    global firstrun
+                    if stylusProximityStatus == "in" and firstrun == False:
+                        disableTouch(matches[0])
+                    elif stylusProximityStatus == "out":
+                        enableTouch(matches[0])
+                        firstrun = True
+
+    GObject.timeout_add(200, checkPalmReject)
 
 context = pyudev.Context()
 for device in context.list_devices(subsystem="iio").match_attribute("name", sensorname): break
@@ -154,4 +223,5 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     GObject.idle_add(checkRotation)
+    # GObject.idle_add(checkPalmReject)
     Gtk.main()
