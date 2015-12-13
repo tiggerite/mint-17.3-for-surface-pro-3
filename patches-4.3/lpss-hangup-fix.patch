@@ -1,0 +1,1004 @@
+diff -Naur linux-4.2/arch/x86/include/asm/iosf_mbi.h linux-4.2.new/arch/x86/include/asm/iosf_mbi.h
+--- linux-4.2/arch/x86/include/asm/iosf_mbi.h	2015-08-30 19:34:09.000000000 +0100
++++ linux-4.2.new/arch/x86/include/asm/iosf_mbi.h	2015-12-05 22:27:43.457591062 +0000
+@@ -1,5 +1,5 @@
+ /*
+- * iosf_mbi.h: Intel OnChip System Fabric MailBox access support
++ * Intel OnChip System Fabric MailBox access support
+  */
+ 
+ #ifndef IOSF_MBI_SYMS_H
+@@ -16,6 +16,18 @@
+ #define MBI_MASK_LO		0x000000FF
+ #define MBI_ENABLE		0xF0
+ 
++/* IOSF SB read/write opcodes */
++#define MBI_MMIO_READ		0x00
++#define MBI_MMIO_WRITE		0x01
++#define MBI_CFG_READ		0x04
++#define MBI_CFG_WRITE		0x05
++#define MBI_CR_READ		0x06
++#define MBI_CR_WRITE		0x07
++#define MBI_REG_READ		0x10
++#define MBI_REG_WRITE		0x11
++#define MBI_ESRAM_READ		0x12
++#define MBI_ESRAM_WRITE		0x13
++
+ /* Baytrail available units */
+ #define BT_MBI_UNIT_AUNIT	0x00
+ #define BT_MBI_UNIT_SMC		0x01
+@@ -28,50 +40,13 @@
+ #define BT_MBI_UNIT_SATA	0xA3
+ #define BT_MBI_UNIT_PCIE	0xA6
+ 
+-/* Baytrail read/write opcodes */
+-#define BT_MBI_AUNIT_READ	0x10
+-#define BT_MBI_AUNIT_WRITE	0x11
+-#define BT_MBI_SMC_READ		0x10
+-#define BT_MBI_SMC_WRITE	0x11
+-#define BT_MBI_CPU_READ		0x10
+-#define BT_MBI_CPU_WRITE	0x11
+-#define BT_MBI_BUNIT_READ	0x10
+-#define BT_MBI_BUNIT_WRITE	0x11
+-#define BT_MBI_PMC_READ		0x06
+-#define BT_MBI_PMC_WRITE	0x07
+-#define BT_MBI_GFX_READ		0x00
+-#define BT_MBI_GFX_WRITE	0x01
+-#define BT_MBI_SMIO_READ	0x06
+-#define BT_MBI_SMIO_WRITE	0x07
+-#define BT_MBI_USB_READ		0x06
+-#define BT_MBI_USB_WRITE	0x07
+-#define BT_MBI_SATA_READ	0x00
+-#define BT_MBI_SATA_WRITE	0x01
+-#define BT_MBI_PCIE_READ	0x00
+-#define BT_MBI_PCIE_WRITE	0x01
+-
+ /* Quark available units */
+ #define QRK_MBI_UNIT_HBA	0x00
+ #define QRK_MBI_UNIT_HB	0x03
+ #define QRK_MBI_UNIT_RMU	0x04
+ #define QRK_MBI_UNIT_MM	0x05
+-#define QRK_MBI_UNIT_MMESRAM	0x05
+ #define QRK_MBI_UNIT_SOC	0x31
+ 
+-/* Quark read/write opcodes */
+-#define QRK_MBI_HBA_READ	0x10
+-#define QRK_MBI_HBA_WRITE	0x11
+-#define QRK_MBI_HB_READ	0x10
+-#define QRK_MBI_HB_WRITE	0x11
+-#define QRK_MBI_RMU_READ	0x10
+-#define QRK_MBI_RMU_WRITE	0x11
+-#define QRK_MBI_MM_READ	0x10
+-#define QRK_MBI_MM_WRITE	0x11
+-#define QRK_MBI_MMESRAM_READ	0x12
+-#define QRK_MBI_MMESRAM_WRITE	0x13
+-#define QRK_MBI_SOC_READ	0x06
+-#define QRK_MBI_SOC_WRITE	0x07
+-
+ #if IS_ENABLED(CONFIG_IOSF_MBI)
+ 
+ bool iosf_mbi_available(void);
+diff -Naur linux-4.2/arch/x86/Kconfig linux-4.2.new/arch/x86/Kconfig
+--- linux-4.2/arch/x86/Kconfig	2015-12-05 22:29:27.417590032 +0000
++++ linux-4.2.new/arch/x86/Kconfig	2015-12-05 22:27:43.457591062 +0000
+@@ -521,9 +521,10 @@
+ 
+ config X86_INTEL_LPSS
+ 	bool "Intel Low Power Subsystem Support"
+-	depends on ACPI
++	depends on X86 && ACPI
+ 	select COMMON_CLK
+ 	select PINCTRL
++	select IOSF_MBI
+ 	---help---
+ 	  Select to build support for Intel Low Power Subsystem such as
+ 	  found on Intel Lynxpoint PCH. Selecting this option enables
+diff -Naur linux-4.2/arch/x86/platform/atom/punit_atom_debug.c linux-4.2.new/arch/x86/platform/atom/punit_atom_debug.c
+--- linux-4.2/arch/x86/platform/atom/punit_atom_debug.c	2015-08-30 19:34:09.000000000 +0100
++++ linux-4.2.new/arch/x86/platform/atom/punit_atom_debug.c	2015-12-05 22:18:42.849596413 +0000
+@@ -25,8 +25,6 @@
+ #include <asm/cpu_device_id.h>
+ #include <asm/iosf_mbi.h>
+ 
+-/* Side band Interface port */
+-#define PUNIT_PORT		0x04
+ /* Power gate status reg */
+ #define PWRGT_STATUS		0x61
+ /* Subsystem config/status Video processor */
+@@ -85,9 +83,8 @@
+ 
+ 	seq_puts(seq_file, "\n\nPUNIT NORTH COMPLEX DEVICES :\n");
+ 	while (punit_devp->name) {
+-		status = iosf_mbi_read(PUNIT_PORT, BT_MBI_PMC_READ,
+-				       punit_devp->reg,
+-				       &punit_pwr_status);
++		status = iosf_mbi_read(BT_MBI_UNIT_PMC, MBI_REG_READ,
++				       punit_devp->reg, &punit_pwr_status);
+ 		if (status) {
+ 			seq_printf(seq_file, "%9s : Read Failed\n",
+ 				   punit_devp->name);
+diff -Naur linux-4.2/arch/x86/platform/intel-quark/imr.c linux-4.2.new/arch/x86/platform/intel-quark/imr.c
+--- linux-4.2/arch/x86/platform/intel-quark/imr.c	2015-08-30 19:34:09.000000000 +0100
++++ linux-4.2.new/arch/x86/platform/intel-quark/imr.c	2015-12-05 22:18:42.849596413 +0000
+@@ -111,23 +111,19 @@
+ 	u32 reg = imr_id * IMR_NUM_REGS + idev->reg_base;
+ 	int ret;
+ 
+-	ret = iosf_mbi_read(QRK_MBI_UNIT_MM, QRK_MBI_MM_READ,
+-				reg++, &imr->addr_lo);
++	ret = iosf_mbi_read(QRK_MBI_UNIT_MM, MBI_REG_READ, reg++, &imr->addr_lo);
+ 	if (ret)
+ 		return ret;
+ 
+-	ret = iosf_mbi_read(QRK_MBI_UNIT_MM, QRK_MBI_MM_READ,
+-				reg++, &imr->addr_hi);
++	ret = iosf_mbi_read(QRK_MBI_UNIT_MM, MBI_REG_READ, reg++, &imr->addr_hi);
+ 	if (ret)
+ 		return ret;
+ 
+-	ret = iosf_mbi_read(QRK_MBI_UNIT_MM, QRK_MBI_MM_READ,
+-				reg++, &imr->rmask);
++	ret = iosf_mbi_read(QRK_MBI_UNIT_MM, MBI_REG_READ, reg++, &imr->rmask);
+ 	if (ret)
+ 		return ret;
+ 
+-	return iosf_mbi_read(QRK_MBI_UNIT_MM, QRK_MBI_MM_READ,
+-				reg++, &imr->wmask);
++	return iosf_mbi_read(QRK_MBI_UNIT_MM, MBI_REG_READ, reg++, &imr->wmask);
+ }
+ 
+ /**
+@@ -151,31 +147,27 @@
+ 
+ 	local_irq_save(flags);
+ 
+-	ret = iosf_mbi_write(QRK_MBI_UNIT_MM, QRK_MBI_MM_WRITE, reg++,
+-				imr->addr_lo);
++	ret = iosf_mbi_write(QRK_MBI_UNIT_MM, MBI_REG_WRITE, reg++, imr->addr_lo);
+ 	if (ret)
+ 		goto failed;
+ 
+-	ret = iosf_mbi_write(QRK_MBI_UNIT_MM, QRK_MBI_MM_WRITE,
+-				reg++, imr->addr_hi);
++	ret = iosf_mbi_write(QRK_MBI_UNIT_MM, MBI_REG_WRITE, reg++, imr->addr_hi);
+ 	if (ret)
+ 		goto failed;
+ 
+-	ret = iosf_mbi_write(QRK_MBI_UNIT_MM, QRK_MBI_MM_WRITE,
+-				reg++, imr->rmask);
++	ret = iosf_mbi_write(QRK_MBI_UNIT_MM, MBI_REG_WRITE, reg++, imr->rmask);
+ 	if (ret)
+ 		goto failed;
+ 
+-	ret = iosf_mbi_write(QRK_MBI_UNIT_MM, QRK_MBI_MM_WRITE,
+-				reg++, imr->wmask);
++	ret = iosf_mbi_write(QRK_MBI_UNIT_MM, MBI_REG_WRITE, reg++, imr->wmask);
+ 	if (ret)
+ 		goto failed;
+ 
+ 	/* Lock bit must be set separately to addr_lo address bits. */
+ 	if (lock) {
+ 		imr->addr_lo |= IMR_LOCK;
+-		ret = iosf_mbi_write(QRK_MBI_UNIT_MM, QRK_MBI_MM_WRITE,
+-					reg - IMR_NUM_REGS, imr->addr_lo);
++		ret = iosf_mbi_write(QRK_MBI_UNIT_MM, MBI_REG_WRITE,
++				     reg - IMR_NUM_REGS, imr->addr_lo);
+ 		if (ret)
+ 			goto failed;
+ 	}
+diff -Naur linux-4.2/drivers/acpi/acpi_lpss.c linux-4.2.new/drivers/acpi/acpi_lpss.c
+--- linux-4.2/drivers/acpi/acpi_lpss.c	2015-08-30 19:34:09.000000000 +0100
++++ linux-4.2.new/drivers/acpi/acpi_lpss.c	2015-12-05 22:27:43.457591062 +0000
+@@ -16,11 +16,16 @@
+ #include <linux/clk-provider.h>
+ #include <linux/err.h>
+ #include <linux/io.h>
++#include <linux/mutex.h>
+ #include <linux/platform_device.h>
+ #include <linux/platform_data/clk-lpss.h>
+ #include <linux/pm_runtime.h>
+ #include <linux/delay.h>
+ 
++#include <asm/cpu_device_id.h>
++#include <asm/iosf_mbi.h>
++#include <asm/pmc_atom.h>
++
+ #include "internal.h"
+ 
+ ACPI_MODULE_NAME("acpi_lpss");
+@@ -71,7 +76,7 @@
+ 	void (*setup)(struct lpss_private_data *pdata);
+ };
+ 
+-static struct lpss_device_desc lpss_dma_desc = {
++static const struct lpss_device_desc lpss_dma_desc = {
+ 	.flags = LPSS_CLK,
+ };
+ 
+@@ -84,6 +89,23 @@
+ 	u32 prv_reg_ctx[LPSS_PRV_REG_COUNT];
+ };
+ 
++/* LPSS run time quirks */
++static unsigned int lpss_quirks;
++
++/*
++ * LPSS_QUIRK_ALWAYS_POWER_ON: override power state for LPSS DMA device.
++ *
++ * The LPSS DMA controller does not have neither _PS0 nor _PS3 method. Moreover
++ * it can be powered off automatically whenever the last LPSS device goes down.
++ * In case of no power any access to the DMA controller will hang the system.
++ * The behaviour is reproduced on some HP laptops based on Intel BayTrail as
++ * well as on ASuS T100TA transformer.
++ *
++ * This quirk overrides power state of entire LPSS island to keep DMA powered
++ * on whenever we have at least one other device in use.
++ */
++#define LPSS_QUIRK_ALWAYS_POWER_ON	BIT(0)
++
+ /* UART Component Parameter Register */
+ #define LPSS_UART_CPR			0xF4
+ #define LPSS_UART_CPR_AFCE		BIT(4)
+@@ -178,13 +200,21 @@
+ 	.setup = byt_i2c_setup,
+ };
+ 
+-static struct lpss_device_desc bsw_spi_dev_desc = {
++static const struct lpss_device_desc bsw_spi_dev_desc = {
+ 	.flags = LPSS_CLK | LPSS_CLK_GATE | LPSS_CLK_DIVIDER | LPSS_SAVE_CTX
+ 			| LPSS_NO_D3_DELAY,
+ 	.prv_offset = 0x400,
+ 	.setup = lpss_deassert_reset,
+ };
+ 
++#define ICPU(model)	{ X86_VENDOR_INTEL, 6, model, X86_FEATURE_ANY, }
++
++static const struct x86_cpu_id lpss_cpu_ids[] = {
++	ICPU(0x37),	/* Valleyview, Bay Trail */
++	ICPU(0x4c),	/* Braswell, Cherry Trail */
++	{}
++};
++
+ #else
+ 
+ #define LPSS_ADDR(desc) (0UL)
+@@ -554,6 +584,17 @@
+ {
+ 	unsigned int i;
+ 
++	for (i = 0; i < LPSS_PRV_REG_COUNT; i++) {
++		unsigned long offset = i * sizeof(u32);
++
++		__lpss_reg_write(pdata->prv_reg_ctx[i], pdata, offset);
++		dev_dbg(dev, "restoring 0x%08x to LPSS reg at offset 0x%02lx\n",
++			pdata->prv_reg_ctx[i], offset);
++	}
++}
++
++static void acpi_lpss_d3_to_d0_delay(struct lpss_private_data *pdata)
++{
+ 	/*
+ 	 * The following delay is needed or the subsequent write operations may
+ 	 * fail. The LPSS devices are actually PCI devices and the PCI spec
+@@ -561,14 +602,34 @@
+ 		delay = 0;
+ 
+ 	msleep(delay);
++}
+ 
+-	for (i = 0; i < LPSS_PRV_REG_COUNT; i++) {
+-		unsigned long offset = i * sizeof(u32);
++static int acpi_lpss_activate(struct device *dev)
++{
++	struct lpss_private_data *pdata = acpi_driver_data(ACPI_COMPANION(dev));
++	int ret;
+ 
+-		__lpss_reg_write(pdata->prv_reg_ctx[i], pdata, offset);
+-		dev_dbg(dev, "restoring 0x%08x to LPSS reg at offset 0x%02lx\n",
+-			pdata->prv_reg_ctx[i], offset);
+-	}
++	ret = acpi_dev_runtime_resume(dev);
++	if (ret)
++		return ret;
++
++	acpi_lpss_d3_to_d0_delay(pdata);
++
++	/*
++	 * This is called only on ->probe() stage where a device is either in
++	 * known state defined by BIOS or most likely powered off. Due to this
++	 * we have to deassert reset line to be sure that ->probe() will
++	 * recognize the device.
++	 */
++	if (pdata->dev_desc->flags & LPSS_SAVE_CTX)
++		lpss_deassert_reset(pdata);
++
++	return 0;
++}
++
++static void acpi_lpss_dismiss(struct device *dev)
++{
++	acpi_dev_runtime_suspend(dev);
+ }
+ 
+ #ifdef CONFIG_PM_SLEEP
+@@ -596,6 +657,8 @@
+ 	if (ret)
+ 		return ret;
+ 
++	acpi_lpss_d3_to_d0_delay(pdata);
++
+ 	if (pdata->dev_desc->flags & LPSS_SAVE_CTX)
+ 		acpi_lpss_restore_ctx(dev, pdata);
+ 
+@@ -603,6 +666,89 @@
+ }
+ #endif /* CONFIG_PM_SLEEP */
+ 
++/* IOSF SB for LPSS island */
++#define LPSS_IOSF_UNIT_LPIOEP		0xA0
++#define LPSS_IOSF_UNIT_LPIO1		0xAB
++#define LPSS_IOSF_UNIT_LPIO2		0xAC
++
++#define LPSS_IOSF_PMCSR			0x84
++#define LPSS_PMCSR_D0			0
++#define LPSS_PMCSR_D3hot		3
++#define LPSS_PMCSR_Dx_MASK		GENMASK(1, 0)
++
++#define LPSS_IOSF_GPIODEF0		0x154
++#define LPSS_GPIODEF0_DMA1_D3		BIT(2)
++#define LPSS_GPIODEF0_DMA2_D3		BIT(3)
++#define LPSS_GPIODEF0_DMA_D3_MASK	GENMASK(3, 2)
++
++static DEFINE_MUTEX(lpss_iosf_mutex);
++
++static void lpss_iosf_enter_d3_state(void)
++{
++	u32 value1 = 0;
++	u32 mask1 = LPSS_GPIODEF0_DMA_D3_MASK;
++	u32 value2 = LPSS_PMCSR_D3hot;
++	u32 mask2 = LPSS_PMCSR_Dx_MASK;
++	/*
++	 * PMC provides an information about actual status of the LPSS devices.
++	 * Here we read the values related to LPSS power island, i.e. LPSS
++	 * devices, excluding both LPSS DMA controllers, along with SCC domain.
++	 */
++	u32 func_dis, d3_sts_0, pmc_status, pmc_mask = 0xfe000ffe;
++	int ret;
++
++	ret = pmc_atom_read(PMC_FUNC_DIS, &func_dis);
++	if (ret)
++		return;
++
++	mutex_lock(&lpss_iosf_mutex);
++
++	ret = pmc_atom_read(PMC_D3_STS_0, &d3_sts_0);
++	if (ret)
++		goto exit;
++
++	/*
++	 * Get the status of entire LPSS power island per device basis.
++	 * Shutdown both LPSS DMA controllers if and only if all other devices
++	 * are already in D3hot.
++	 */
++	pmc_status = (~(d3_sts_0 | func_dis)) & pmc_mask;
++	if (pmc_status)
++		goto exit;
++
++	iosf_mbi_modify(LPSS_IOSF_UNIT_LPIO1, MBI_CFG_WRITE,
++			LPSS_IOSF_PMCSR, value2, mask2);
++
++	iosf_mbi_modify(LPSS_IOSF_UNIT_LPIO2, MBI_CFG_WRITE,
++			LPSS_IOSF_PMCSR, value2, mask2);
++
++	iosf_mbi_modify(LPSS_IOSF_UNIT_LPIOEP, MBI_CR_WRITE,
++			LPSS_IOSF_GPIODEF0, value1, mask1);
++exit:
++	mutex_unlock(&lpss_iosf_mutex);
++}
++
++static void lpss_iosf_exit_d3_state(void)
++{
++	u32 value1 = LPSS_GPIODEF0_DMA1_D3 | LPSS_GPIODEF0_DMA2_D3;
++	u32 mask1 = LPSS_GPIODEF0_DMA_D3_MASK;
++	u32 value2 = LPSS_PMCSR_D0;
++	u32 mask2 = LPSS_PMCSR_Dx_MASK;
++
++	mutex_lock(&lpss_iosf_mutex);
++
++	iosf_mbi_modify(LPSS_IOSF_UNIT_LPIOEP, MBI_CR_WRITE,
++			LPSS_IOSF_GPIODEF0, value1, mask1);
++
++	iosf_mbi_modify(LPSS_IOSF_UNIT_LPIO2, MBI_CFG_WRITE,
++			LPSS_IOSF_PMCSR, value2, mask2);
++
++	iosf_mbi_modify(LPSS_IOSF_UNIT_LPIO1, MBI_CFG_WRITE,
++			LPSS_IOSF_PMCSR, value2, mask2);
++
++	mutex_unlock(&lpss_iosf_mutex);
++}
++
+ static int acpi_lpss_runtime_suspend(struct device *dev)
+ {
+ 	struct lpss_private_data *pdata = acpi_driver_data(ACPI_COMPANION(dev));
+@@ -615,7 +761,17 @@
+ 	if (pdata->dev_desc->flags & LPSS_SAVE_CTX)
+ 		acpi_lpss_save_ctx(dev, pdata);
+ 
+-	return acpi_dev_runtime_suspend(dev);
++	ret = acpi_dev_runtime_suspend(dev);
++
++	/*
++	 * This call must be last in the sequence, otherwise PMC will return
++	 * wrong status for devices being about to be powered off. See
++	 * lpss_iosf_enter_d3_state() for further information.
++	 */
++	if (lpss_quirks & LPSS_QUIRK_ALWAYS_POWER_ON && iosf_mbi_available())
++		lpss_iosf_enter_d3_state();
++
++	return ret;
+ }
+ 
+ static int acpi_lpss_runtime_resume(struct device *dev)
+@@ -623,10 +779,19 @@
+ 	struct lpss_private_data *pdata = acpi_driver_data(ACPI_COMPANION(dev));
+ 	int ret;
+ 
++	/*
++	 * This call is kept first to be in symmetry with
++	 * acpi_lpss_runtime_suspend() one.
++	 */
++	if (lpss_quirks & LPSS_QUIRK_ALWAYS_POWER_ON && iosf_mbi_available())
++		lpss_iosf_exit_d3_state();
++
+ 	ret = acpi_dev_runtime_resume(dev);
+ 	if (ret)
+ 		return ret;
+ 
++	acpi_lpss_d3_to_d0_delay(pdata);
++
+ 	if (pdata->dev_desc->flags & LPSS_SAVE_CTX)
+ 		acpi_lpss_restore_ctx(dev, pdata);
+ 
+@@ -635,6 +800,10 @@
+ #endif /* CONFIG_PM */
+ 
+ static struct dev_pm_domain acpi_lpss_pm_domain = {
++#ifdef CONFIG_PM
++	.activate = acpi_lpss_activate,
++	.dismiss = acpi_lpss_dismiss,
++#endif
+ 	.ops = {
+ #ifdef CONFIG_PM
+ #ifdef CONFIG_PM_SLEEP
+@@ -680,8 +849,14 @@
+ 	}
+ 
+ 	switch (action) {
+-	case BUS_NOTIFY_ADD_DEVICE:
++	case BUS_NOTIFY_BIND_DRIVER:
+ 		pdev->dev.pm_domain = &acpi_lpss_pm_domain;
++		break;
++	case BUS_NOTIFY_DRIVER_NOT_BOUND:
++	case BUS_NOTIFY_UNBOUND_DRIVER:
++		pdev->dev.pm_domain = NULL;
++		break;
++	case BUS_NOTIFY_ADD_DEVICE:
+ 		if (pdata->dev_desc->flags & LPSS_LTR)
+ 			return sysfs_create_group(&pdev->dev.kobj,
+ 						  &lpss_attr_group);
+@@ -689,7 +864,6 @@
+ 	case BUS_NOTIFY_DEL_DEVICE:
+ 		if (pdata->dev_desc->flags & LPSS_LTR)
+ 			sysfs_remove_group(&pdev->dev.kobj, &lpss_attr_group);
+-		pdev->dev.pm_domain = NULL;
+ 		break;
+ 	default:
+ 		break;
+@@ -729,10 +903,19 @@
+ 
+ void __init acpi_lpss_init(void)
+ {
+-	if (!lpt_clk_init()) {
+-		bus_register_notifier(&platform_bus_type, &acpi_lpss_nb);
+-		acpi_scan_add_handler(&lpss_handler);
+-	}
++	const struct x86_cpu_id *id;
++	int ret;
++
++	ret = lpt_clk_init();
++	if (ret)
++		return;
++
++	id = x86_match_cpu(lpss_cpu_ids);
++	if (id)
++		lpss_quirks |= LPSS_QUIRK_ALWAYS_POWER_ON;
++
++	bus_register_notifier(&platform_bus_type, &acpi_lpss_nb);
++	acpi_scan_add_handler(&lpss_handler);
+ }
+ 
+ #else
+diff -Naur linux-4.2/drivers/base/dd.c linux-4.2.new/drivers/base/dd.c
+--- linux-4.2/drivers/base/dd.c	2015-12-05 22:29:27.693590030 +0000
++++ linux-4.2.new/drivers/base/dd.c	2015-12-05 22:05:02.365604536 +0000
+@@ -268,6 +268,9 @@
+ 	ret = driver_sysfs_add(dev);
+ 	if (!ret)
+ 		driver_bound(dev);
++	else if (dev->bus)
++		blocking_notifier_call_chain(&dev->bus->p->bus_notifier,
++					     BUS_NOTIFY_DRIVER_NOT_BOUND, dev);
+ 	return ret;
+ }
+ EXPORT_SYMBOL_GPL(device_bind_driver);
+@@ -290,7 +293,7 @@
+ 	/* If using pinctrl, bind pins now before probing */
+ 	ret = pinctrl_bind_pins(dev);
+ 	if (ret)
+-		goto probe_failed;
++		goto pinctrl_bind_failed;
+ 
+ 	if (driver_sysfs_add(dev)) {
+ 		printk(KERN_ERR "%s: driver_sysfs_add(%s) failed\n",
+@@ -324,6 +327,10 @@
+ 	goto done;
+ 
+ probe_failed:
++	if (dev->bus)
++		blocking_notifier_call_chain(&dev->bus->p->bus_notifier,
++					     BUS_NOTIFY_DRIVER_NOT_BOUND, dev);
++pinctrl_bind_failed:
+ 	devres_release_all(dev);
+ 	driver_sysfs_remove(dev);
+ 	dev->driver = NULL;
+@@ -691,7 +698,6 @@
+ 			blocking_notifier_call_chain(&dev->bus->p->bus_notifier,
+ 						     BUS_NOTIFY_UNBOUND_DRIVER,
+ 						     dev);
+-
+ 	}
+ }
+ 
+diff -Naur linux-4.2/drivers/dma/dw/core.c linux-4.2.new/drivers/dma/dw/core.c
+--- linux-4.2/drivers/dma/dw/core.c	2015-12-05 22:29:27.705590030 +0000
++++ linux-4.2.new/drivers/dma/dw/core.c	2015-12-05 22:28:15.441590745 +0000
+@@ -622,12 +622,17 @@
+ static irqreturn_t dw_dma_interrupt(int irq, void *dev_id)
+ {
+ 	struct dw_dma *dw = dev_id;
+-	u32 status = dma_readl(dw, STATUS_INT);
++	u32 status;
+ 
++	/* Check if we have any interrupt from the DMAC which is not in use */
++	if (!dw->in_use)
++		return IRQ_NONE;
++
++	status = dma_readl(dw, STATUS_INT);
+ 	dev_vdbg(dw->dma.dev, "%s: status=0x%x\n", __func__, status);
+ 
+ 	/* Check if we have any interrupt from the DMAC */
+-	if (!status || !dw->in_use)
++	if (!status)
+ 		return IRQ_NONE;
+ 
+ 	/*
+diff -Naur linux-4.2/drivers/dma/dw/platform.c linux-4.2.new/drivers/dma/dw/platform.c
+--- linux-4.2/drivers/dma/dw/platform.c	2015-08-30 19:34:09.000000000 +0100
++++ linux-4.2.new/drivers/dma/dw/platform.c	2015-12-05 22:28:06.021590838 +0000
+@@ -233,7 +233,19 @@
+ {
+ 	struct dw_dma_chip *chip = platform_get_drvdata(pdev);
+ 
++	/*
++	 * We have to call dw_dma_disable() to stop any ongoing transfer. On
++	 * some platforms we can't do that since DMA device is powered off.
++	 * Moreover we have no possibility to check if the platform is affected
++	 * or not. That's why we call pm_runtime_get_sync() / pm_runtime_put()
++	 * unconditionally. On the other hand we can't use
++	 * pm_runtime_suspended() because runtime PM framework is not fully
++	 * used by the driver.
++	 */
++	pm_runtime_get_sync(chip->dev);
+ 	dw_dma_disable(chip);
++	pm_runtime_put_sync_suspend(chip->dev);
++
+ 	clk_disable_unprepare(chip->clk);
+ }
+ 
+diff -Naur linux-4.2/drivers/i2c/busses/i2c-designware-baytrail.c linux-4.2.new/drivers/i2c/busses/i2c-designware-baytrail.c
+--- linux-4.2/drivers/i2c/busses/i2c-designware-baytrail.c	2015-08-30 19:34:09.000000000 +0100
++++ linux-4.2.new/drivers/i2c/busses/i2c-designware-baytrail.c	2015-12-05 22:18:42.849596413 +0000
+@@ -34,8 +34,7 @@
+ 	u32 data;
+ 	int ret;
+ 
+-	ret = iosf_mbi_read(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_READ, PUNIT_SEMAPHORE,
+-				&data);
++	ret = iosf_mbi_read(BT_MBI_UNIT_PMC, MBI_REG_READ, PUNIT_SEMAPHORE, &data);
+ 	if (ret) {
+ 		dev_err(dev, "iosf failed to read punit semaphore\n");
+ 		return ret;
+@@ -50,21 +49,19 @@
+ {
+ 	u32 data;
+ 
+-	if (iosf_mbi_read(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_READ,
+-				PUNIT_SEMAPHORE, &data)) {
++	if (iosf_mbi_read(BT_MBI_UNIT_PMC, MBI_REG_READ, PUNIT_SEMAPHORE, &data)) {
+ 		dev_err(dev, "iosf failed to reset punit semaphore during read\n");
+ 		return;
+ 	}
+ 
+ 	data &= ~PUNIT_SEMAPHORE_BIT;
+-	if (iosf_mbi_write(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_WRITE,
+-				PUNIT_SEMAPHORE, data))
++	if (iosf_mbi_write(BT_MBI_UNIT_PMC, MBI_REG_WRITE, PUNIT_SEMAPHORE, data))
+ 		dev_err(dev, "iosf failed to reset punit semaphore during write\n");
+ }
+ 
+ static int baytrail_i2c_acquire(struct dw_i2c_dev *dev)
+ {
+-	u32 sem;
++	u32 sem = PUNIT_SEMAPHORE_ACQUIRE;
+ 	int ret;
+ 	unsigned long start, end;
+ 
+@@ -77,8 +74,7 @@
+ 		return 0;
+ 
+ 	/* host driver writes to side band semaphore register */
+-	ret = iosf_mbi_write(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_WRITE,
+-				PUNIT_SEMAPHORE, PUNIT_SEMAPHORE_ACQUIRE);
++	ret = iosf_mbi_write(BT_MBI_UNIT_PMC, MBI_REG_WRITE, PUNIT_SEMAPHORE, sem);
+ 	if (ret) {
+ 		dev_err(dev->dev, "iosf punit semaphore request failed\n");
+ 		return ret;
+@@ -102,8 +98,7 @@
+ 	dev_err(dev->dev, "punit semaphore timed out, resetting\n");
+ 	reset_semaphore(dev->dev);
+ 
+-	ret = iosf_mbi_read(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_READ,
+-				PUNIT_SEMAPHORE, &sem);
++	ret = iosf_mbi_read(BT_MBI_UNIT_PMC, MBI_REG_READ, PUNIT_SEMAPHORE, &sem);
+ 	if (ret)
+ 		dev_err(dev->dev, "iosf failed to read punit semaphore\n");
+ 	else
+diff -Naur linux-4.2/drivers/powercap/intel_rapl.c linux-4.2.new/drivers/powercap/intel_rapl.c
+--- linux-4.2/drivers/powercap/intel_rapl.c	2015-12-05 22:29:27.809590029 +0000
++++ linux-4.2.new/drivers/powercap/intel_rapl.c	2015-12-05 22:18:42.849596413 +0000
+@@ -988,16 +988,16 @@
+ 	}
+ 
+ 	if (!power_ctrl_orig_val)
+-		iosf_mbi_read(BT_MBI_UNIT_PMC, BT_MBI_PMC_READ,
+-			rapl_defaults->floor_freq_reg_addr,
+-				&power_ctrl_orig_val);
++		iosf_mbi_read(BT_MBI_UNIT_PMC, MBI_CR_READ,
++			      rapl_defaults->floor_freq_reg_addr,
++			      &power_ctrl_orig_val);
+ 	mdata = power_ctrl_orig_val;
+ 	if (enable) {
+ 		mdata &= ~(0x7f << 8);
+ 		mdata |= 1 << 8;
+ 	}
+-	iosf_mbi_write(BT_MBI_UNIT_PMC, BT_MBI_PMC_WRITE,
+-		rapl_defaults->floor_freq_reg_addr, mdata);
++	iosf_mbi_write(BT_MBI_UNIT_PMC, MBI_CR_WRITE,
++		       rapl_defaults->floor_freq_reg_addr, mdata);
+ }
+ 
+ static u64 rapl_compute_time_window_core(struct rapl_package *rp, u64 value,
+diff -Naur linux-4.2/drivers/thermal/intel_quark_dts_thermal.c linux-4.2.new/drivers/thermal/intel_quark_dts_thermal.c
+--- linux-4.2/drivers/thermal/intel_quark_dts_thermal.c	2015-08-30 19:34:09.000000000 +0100
++++ linux-4.2.new/drivers/thermal/intel_quark_dts_thermal.c	2015-12-05 22:18:42.853596413 +0000
+@@ -125,8 +125,8 @@
+ 	struct soc_sensor_entry *aux_entry = tzd->devdata;
+ 	int ret;
+ 
+-	ret = iosf_mbi_read(QRK_MBI_UNIT_RMU, QRK_MBI_RMU_READ,
+-					QRK_DTS_REG_OFFSET_ENABLE, &out);
++	ret = iosf_mbi_read(QRK_MBI_UNIT_RMU, MBI_REG_READ,
++			    QRK_DTS_REG_OFFSET_ENABLE, &out);
+ 	if (ret)
+ 		return ret;
+ 
+@@ -137,8 +137,8 @@
+ 
+ 	if (!aux_entry->locked) {
+ 		out |= QRK_DTS_ENABLE_BIT;
+-		ret = iosf_mbi_write(QRK_MBI_UNIT_RMU, QRK_MBI_RMU_WRITE,
+-					QRK_DTS_REG_OFFSET_ENABLE, out);
++		ret = iosf_mbi_write(QRK_MBI_UNIT_RMU, MBI_REG_WRITE,
++				     QRK_DTS_REG_OFFSET_ENABLE, out);
+ 		if (ret)
+ 			return ret;
+ 
+@@ -158,8 +158,8 @@
+ 	struct soc_sensor_entry *aux_entry = tzd->devdata;
+ 	int ret;
+ 
+-	ret = iosf_mbi_read(QRK_MBI_UNIT_RMU, QRK_MBI_RMU_READ,
+-					QRK_DTS_REG_OFFSET_ENABLE, &out);
++	ret = iosf_mbi_read(QRK_MBI_UNIT_RMU, MBI_REG_READ,
++			    QRK_DTS_REG_OFFSET_ENABLE, &out);
+ 	if (ret)
+ 		return ret;
+ 
+@@ -170,8 +170,8 @@
+ 
+ 	if (!aux_entry->locked) {
+ 		out &= ~QRK_DTS_ENABLE_BIT;
+-		ret = iosf_mbi_write(QRK_MBI_UNIT_RMU, QRK_MBI_RMU_WRITE,
+-					QRK_DTS_REG_OFFSET_ENABLE, out);
++		ret = iosf_mbi_write(QRK_MBI_UNIT_RMU, MBI_REG_WRITE,
++				     QRK_DTS_REG_OFFSET_ENABLE, out);
+ 
+ 		if (ret)
+ 			return ret;
+@@ -192,8 +192,8 @@
+ 	u32 out;
+ 
+ 	mutex_lock(&dts_update_mutex);
+-	status = iosf_mbi_read(QRK_MBI_UNIT_RMU, QRK_MBI_RMU_READ,
+-				QRK_DTS_REG_OFFSET_PTPS, &out);
++	status = iosf_mbi_read(QRK_MBI_UNIT_RMU, MBI_REG_READ,
++			       QRK_DTS_REG_OFFSET_PTPS, &out);
+ 	mutex_unlock(&dts_update_mutex);
+ 
+ 	if (status)
+@@ -237,8 +237,8 @@
+ 		goto failed;
+ 	}
+ 
+-	ret = iosf_mbi_read(QRK_MBI_UNIT_RMU, QRK_MBI_RMU_READ,
+-				QRK_DTS_REG_OFFSET_PTPS, &store_ptps);
++	ret = iosf_mbi_read(QRK_MBI_UNIT_RMU, MBI_REG_READ,
++			    QRK_DTS_REG_OFFSET_PTPS, &store_ptps);
+ 	if (ret)
+ 		goto failed;
+ 
+@@ -263,8 +263,8 @@
+ 	out |= (temp_out & QRK_DTS_MASK_TP_THRES) <<
+ 		(trip * QRK_DTS_SHIFT_TP);
+ 
+-	ret = iosf_mbi_write(QRK_MBI_UNIT_RMU, QRK_MBI_RMU_WRITE,
+-				QRK_DTS_REG_OFFSET_PTPS, out);
++	ret = iosf_mbi_write(QRK_MBI_UNIT_RMU, MBI_REG_WRITE,
++			     QRK_DTS_REG_OFFSET_PTPS, out);
+ 
+ failed:
+ 	mutex_unlock(&dts_update_mutex);
+@@ -295,8 +295,8 @@
+ 	int ret;
+ 
+ 	mutex_lock(&dts_update_mutex);
+-	ret = iosf_mbi_read(QRK_MBI_UNIT_RMU, QRK_MBI_RMU_READ,
+-					QRK_DTS_REG_OFFSET_TEMP, &out);
++	ret = iosf_mbi_read(QRK_MBI_UNIT_RMU, MBI_REG_READ,
++			    QRK_DTS_REG_OFFSET_TEMP, &out);
+ 	mutex_unlock(&dts_update_mutex);
+ 
+ 	if (ret)
+@@ -351,13 +351,13 @@
+ 	if (aux_entry) {
+ 		if (!aux_entry->locked) {
+ 			mutex_lock(&dts_update_mutex);
+-			iosf_mbi_write(QRK_MBI_UNIT_RMU, QRK_MBI_RMU_WRITE,
+-					QRK_DTS_REG_OFFSET_ENABLE,
+-					aux_entry->store_dts_enable);
+-
+-			iosf_mbi_write(QRK_MBI_UNIT_RMU, QRK_MBI_RMU_WRITE,
+-					QRK_DTS_REG_OFFSET_PTPS,
+-					aux_entry->store_ptps);
++			iosf_mbi_write(QRK_MBI_UNIT_RMU, MBI_REG_WRITE,
++				       QRK_DTS_REG_OFFSET_ENABLE,
++				       aux_entry->store_dts_enable);
++
++			iosf_mbi_write(QRK_MBI_UNIT_RMU, MBI_REG_WRITE,
++				       QRK_DTS_REG_OFFSET_PTPS,
++				       aux_entry->store_ptps);
+ 			mutex_unlock(&dts_update_mutex);
+ 		}
+ 		thermal_zone_device_unregister(aux_entry->tzone);
+@@ -379,9 +379,8 @@
+ 	}
+ 
+ 	/* Check if DTS register is locked */
+-	err = iosf_mbi_read(QRK_MBI_UNIT_RMU, QRK_MBI_RMU_READ,
+-					QRK_DTS_REG_OFFSET_LOCK,
+-					&out);
++	err = iosf_mbi_read(QRK_MBI_UNIT_RMU, MBI_REG_READ,
++			    QRK_DTS_REG_OFFSET_LOCK, &out);
+ 	if (err)
+ 		goto err_ret;
+ 
+@@ -396,16 +395,16 @@
+ 	/* Store DTS default state if DTS registers are not locked */
+ 	if (!aux_entry->locked) {
+ 		/* Store DTS default enable for restore on exit */
+-		err = iosf_mbi_read(QRK_MBI_UNIT_RMU, QRK_MBI_RMU_READ,
+-					QRK_DTS_REG_OFFSET_ENABLE,
+-					&aux_entry->store_dts_enable);
++		err = iosf_mbi_read(QRK_MBI_UNIT_RMU, MBI_REG_READ,
++				    QRK_DTS_REG_OFFSET_ENABLE,
++				    &aux_entry->store_dts_enable);
+ 		if (err)
+ 			goto err_ret;
+ 
+ 		/* Store DTS default PTPS register for restore on exit */
+-		err = iosf_mbi_read(QRK_MBI_UNIT_RMU, QRK_MBI_RMU_READ,
+-					QRK_DTS_REG_OFFSET_PTPS,
+-					&aux_entry->store_ptps);
++		err = iosf_mbi_read(QRK_MBI_UNIT_RMU, MBI_REG_READ,
++				    QRK_DTS_REG_OFFSET_PTPS,
++				    &aux_entry->store_ptps);
+ 		if (err)
+ 			goto err_ret;
+ 	}
+diff -Naur linux-4.2/drivers/thermal/intel_soc_dts_iosf.c linux-4.2.new/drivers/thermal/intel_soc_dts_iosf.c
+--- linux-4.2/drivers/thermal/intel_soc_dts_iosf.c	2015-08-30 19:34:09.000000000 +0100
++++ linux-4.2.new/drivers/thermal/intel_soc_dts_iosf.c	2015-12-05 22:18:42.853596413 +0000
+@@ -90,7 +90,7 @@
+ 	dts = tzd->devdata;
+ 	sensors = dts->sensors;
+ 	mutex_lock(&sensors->dts_update_lock);
+-	status = iosf_mbi_read(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_READ,
++	status = iosf_mbi_read(BT_MBI_UNIT_PMC, MBI_REG_READ,
+ 			       SOC_DTS_OFFSET_PTPS, &out);
+ 	mutex_unlock(&sensors->dts_update_lock);
+ 	if (status)
+@@ -124,27 +124,27 @@
+ 
+ 	temp_out = (sensors->tj_max - temp) / 1000;
+ 
+-	status = iosf_mbi_read(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_READ,
++	status = iosf_mbi_read(BT_MBI_UNIT_PMC, MBI_REG_READ,
+ 			       SOC_DTS_OFFSET_PTPS, &store_ptps);
+ 	if (status)
+ 		return status;
+ 
+ 	out = (store_ptps & ~(0xFF << (thres_index * 8)));
+ 	out |= (temp_out & 0xFF) << (thres_index * 8);
+-	status = iosf_mbi_write(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_WRITE,
++	status = iosf_mbi_write(BT_MBI_UNIT_PMC, MBI_REG_WRITE,
+ 				SOC_DTS_OFFSET_PTPS, out);
+ 	if (status)
+ 		return status;
+ 
+ 	pr_debug("update_trip_temp PTPS = %x\n", out);
+-	status = iosf_mbi_read(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_READ,
++	status = iosf_mbi_read(BT_MBI_UNIT_PMC, MBI_REG_READ,
+ 			       SOC_DTS_OFFSET_PTMC, &out);
+ 	if (status)
+ 		goto err_restore_ptps;
+ 
+ 	store_ptmc = out;
+ 
+-	status = iosf_mbi_read(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_READ,
++	status = iosf_mbi_read(BT_MBI_UNIT_PMC, MBI_REG_READ,
+ 			       SOC_DTS_TE_AUX0 + thres_index,
+ 			       &te_out);
+ 	if (status)
+@@ -167,12 +167,12 @@
+ 			out &= ~SOC_DTS_AUX0_ENABLE_BIT;
+ 		te_out &= ~int_enable_bit;
+ 	}
+-	status = iosf_mbi_write(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_WRITE,
++	status = iosf_mbi_write(BT_MBI_UNIT_PMC, MBI_REG_WRITE,
+ 				SOC_DTS_OFFSET_PTMC, out);
+ 	if (status)
+ 		goto err_restore_te_out;
+ 
+-	status = iosf_mbi_write(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_WRITE,
++	status = iosf_mbi_write(BT_MBI_UNIT_PMC, MBI_REG_WRITE,
+ 				SOC_DTS_TE_AUX0 + thres_index,
+ 				te_out);
+ 	if (status)
+@@ -182,13 +182,13 @@
+ 
+ 	return 0;
+ err_restore_te_out:
+-	iosf_mbi_write(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_WRITE,
++	iosf_mbi_write(BT_MBI_UNIT_PMC, MBI_REG_WRITE,
+ 		       SOC_DTS_OFFSET_PTMC, store_te_out);
+ err_restore_ptmc:
+-	iosf_mbi_write(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_WRITE,
++	iosf_mbi_write(BT_MBI_UNIT_PMC, MBI_REG_WRITE,
+ 		       SOC_DTS_OFFSET_PTMC, store_ptmc);
+ err_restore_ptps:
+-	iosf_mbi_write(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_WRITE,
++	iosf_mbi_write(BT_MBI_UNIT_PMC, MBI_REG_WRITE,
+ 		       SOC_DTS_OFFSET_PTPS, store_ptps);
+ 	/* Nothing we can do if restore fails */
+ 
+@@ -235,7 +235,7 @@
+ 
+ 	dts = tzd->devdata;
+ 	sensors = dts->sensors;
+-	status = iosf_mbi_read(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_READ,
++	status = iosf_mbi_read(BT_MBI_UNIT_PMC, MBI_REG_READ,
+ 			       SOC_DTS_OFFSET_TEMP, &out);
+ 	if (status)
+ 		return status;
+@@ -259,14 +259,14 @@
+ 	u32 out;
+ 	int ret;
+ 
+-	ret = iosf_mbi_read(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_READ,
++	ret = iosf_mbi_read(BT_MBI_UNIT_PMC, MBI_REG_READ,
+ 			    SOC_DTS_OFFSET_ENABLE, &out);
+ 	if (ret)
+ 		return ret;
+ 
+ 	if (!(out & BIT(id))) {
+ 		out |= BIT(id);
+-		ret = iosf_mbi_write(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_WRITE,
++		ret = iosf_mbi_write(BT_MBI_UNIT_PMC, MBI_REG_WRITE,
+ 				     SOC_DTS_OFFSET_ENABLE, out);
+ 		if (ret)
+ 			return ret;
+@@ -278,7 +278,7 @@
+ static void remove_dts_thermal_zone(struct intel_soc_dts_sensor_entry *dts)
+ {
+ 	if (dts) {
+-		iosf_mbi_write(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_WRITE,
++		iosf_mbi_write(BT_MBI_UNIT_PMC, MBI_REG_WRITE,
+ 			       SOC_DTS_OFFSET_ENABLE, dts->store_status);
+ 		thermal_zone_device_unregister(dts->tzone);
+ 	}
+@@ -296,9 +296,8 @@
+ 	int i;
+ 
+ 	/* Store status to restor on exit */
+-	ret = iosf_mbi_read(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_READ,
+-			    SOC_DTS_OFFSET_ENABLE,
+-			    &dts->store_status);
++	ret = iosf_mbi_read(BT_MBI_UNIT_PMC, MBI_REG_READ,
++			    SOC_DTS_OFFSET_ENABLE, &dts->store_status);
+ 	if (ret)
+ 		goto err_ret;
+ 
+@@ -311,7 +310,7 @@
+ 	}
+ 
+ 	/* Check if the writable trip we provide is not used by BIOS */
+-	ret = iosf_mbi_read(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_READ,
++	ret = iosf_mbi_read(BT_MBI_UNIT_PMC, MBI_REG_READ,
+ 			    SOC_DTS_OFFSET_PTPS, &store_ptps);
+ 	if (ret)
+ 		trip_mask = 0;
+@@ -374,19 +373,19 @@
+ 
+ 	spin_lock_irqsave(&sensors->intr_notify_lock, flags);
+ 
+-	status = iosf_mbi_read(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_READ,
++	status = iosf_mbi_read(BT_MBI_UNIT_PMC, MBI_REG_READ,
+ 			       SOC_DTS_OFFSET_PTMC, &ptmc_out);
+ 	ptmc_out |= SOC_DTS_PTMC_APIC_DEASSERT_BIT;
+-	status = iosf_mbi_write(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_WRITE,
++	status = iosf_mbi_write(BT_MBI_UNIT_PMC, MBI_REG_WRITE,
+ 				SOC_DTS_OFFSET_PTMC, ptmc_out);
+ 
+-	status = iosf_mbi_read(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_READ,
++	status = iosf_mbi_read(BT_MBI_UNIT_PMC, MBI_REG_READ,
+ 			       SOC_DTS_OFFSET_PTTSS, &sticky_out);
+ 	pr_debug("status %d PTTSS %x\n", status, sticky_out);
+ 	if (sticky_out & SOC_DTS_TRIP_MASK) {
+ 		int i;
+ 		/* reset sticky bit */
+-		status = iosf_mbi_write(BT_MBI_UNIT_PMC, BT_MBI_BUNIT_WRITE,
++		status = iosf_mbi_write(BT_MBI_UNIT_PMC, MBI_REG_WRITE,
+ 					SOC_DTS_OFFSET_PTTSS, sticky_out);
+ 		spin_unlock_irqrestore(&sensors->intr_notify_lock, flags);
+ 
+diff -Naur linux-4.2/include/linux/device.h linux-4.2.new/include/linux/device.h
+--- linux-4.2/include/linux/device.h	2015-12-05 22:29:27.917590028 +0000
++++ linux-4.2.new/include/linux/device.h	2015-12-05 22:05:02.365604536 +0000
+@@ -191,6 +191,7 @@
+ 						      unbound */
+ #define BUS_NOTIFY_UNBOUND_DRIVER	0x00000007 /* driver is unbound
+ 						      from the device */
++#define BUS_NOTIFY_DRIVER_NOT_BOUND	0x00000008 /* driver fails to be bound */
+ 
+ extern struct kset *bus_get_kset(struct bus_type *bus);
+ extern struct klist *bus_get_device_klist(struct bus_type *bus);

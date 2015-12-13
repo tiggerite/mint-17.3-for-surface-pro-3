@@ -1,0 +1,12 @@
+--- linux-3.19.0.old/Makefile	2015-11-11 01:40:28.294919091 -0800
++++ linux-3.19.0/Makefile	2015-11-11 01:45:10.925238696 -0800
+@@ -1,7 +1,7 @@
+ VERSION = 4
+ PATCHLEVEL = 3
+-SUBLEVEL = 2
+-EXTRAVERSION = 
++SUBLEVEL = 0
++EXTRAVERSION = -4
+ NAME = Blurry Fish Butt
+ 
+ # *DOCUMENTATION*

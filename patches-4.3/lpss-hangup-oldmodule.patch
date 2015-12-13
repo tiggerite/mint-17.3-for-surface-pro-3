@@ -1,0 +1,10 @@
+--- linux-4.3.old/debian.master/abi/4.3.0-3.12/amd64/generic.modules	2015-12-13 08:56:05.006944529 +0000
++++ linux-4.3/debian.master/abi/4.3.0-3.12/amd64/generic.modules	2015-12-13 08:56:11.970944571 +0000
+@@ -1691,7 +1691,6 @@
+ ioatdma
+ ioc4
+ io_edgeport
+-iosf_mbi
+ io_ti
+ iowarrior
+ ip6_gre
