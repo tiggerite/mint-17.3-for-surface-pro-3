@@ -1,0 +1,190 @@
+From: https://lkml.org/lkml/2015/10/21/180
+
+--- linux-4.2/drivers/mfd/intel-lpss-acpi.c	2015-12-05 13:42:05.440744116 +0000
++++ linux-4.2.6/drivers/mfd/intel-lpss-acpi.c	2015-12-05 13:39:19.630997238 +0000
+@@ -25,10 +25,26 @@
+ 	.clk_rate = 120000000,
+ };
+ 
++static const struct intel_lpss_platform_info bxt_info = {
++	.clk_rate = 100000000,
++};
++
++static const struct intel_lpss_platform_info bxt_i2c_info = {
++	.clk_rate = 133000000,
++};
++
+ static const struct acpi_device_id intel_lpss_acpi_ids[] = {
+ 	/* SPT */
+ 	{ "INT3446", (kernel_ulong_t)&spt_info },
+ 	{ "INT3447", (kernel_ulong_t)&spt_info },
++	/* BXT */
++	{ "80860AAC", (kernel_ulong_t)&bxt_i2c_info },
++	{ "80860ABC", (kernel_ulong_t)&bxt_info },
++	{ "80860AC2", (kernel_ulong_t)&bxt_info },
++	/* APL */
++	{ "80865AAC", (kernel_ulong_t)&bxt_i2c_info },
++	{ "80865ABC", (kernel_ulong_t)&bxt_info },
++	{ "80865AC2", (kernel_ulong_t)&bxt_info },
+ 	{ }
+ };
+ MODULE_DEVICE_TABLE(acpi, intel_lpss_acpi_ids);
+--- linux-4.2/drivers/mfd/intel-lpss.c	2015-12-05 13:42:05.440744116 +0000
++++ linux-4.2.6/drivers/mfd/intel-lpss.c	2015-12-05 13:39:19.630997238 +0000
+@@ -25,6 +25,7 @@
+ #include <linux/pm_qos.h>
+ #include <linux/pm_runtime.h>
+ #include <linux/seq_file.h>
++#include <linux/io-64-nonatomic-lo-hi.h>
+ 
+ #include "intel-lpss.h"
+ 
+@@ -52,8 +53,7 @@
+ #define LPSS_PRIV_SSP_REG		0x20
+ #define LPSS_PRIV_SSP_REG_DIS_DMA_FIN	BIT(0)
+ 
+-#define LPSS_PRIV_REMAP_ADDR_LO		0x40
+-#define LPSS_PRIV_REMAP_ADDR_HI		0x44
++#define LPSS_PRIV_REMAP_ADDR		0x40
+ 
+ #define LPSS_PRIV_CAPS			0xfc
+ #define LPSS_PRIV_CAPS_NO_IDMA		BIT(8)
+@@ -250,12 +250,7 @@
+ {
+ 	resource_size_t addr = lpss->info->mem->start;
+ 
+-	writel(addr, lpss->priv + LPSS_PRIV_REMAP_ADDR_LO);
+-#if BITS_PER_LONG > 32
+-	writel(addr >> 32, lpss->priv + LPSS_PRIV_REMAP_ADDR_HI);
+-#else
+-	writel(0, lpss->priv + LPSS_PRIV_REMAP_ADDR_HI);
+-#endif
++	lo_hi_writeq(addr, lpss->priv + LPSS_PRIV_REMAP_ADDR);
+ }
+ 
+ static void intel_lpss_deassert_reset(const struct intel_lpss *lpss)
+--- linux-4.2/drivers/mfd/intel-lpss-pci.c	2015-12-05 13:42:05.440744116 +0000
++++ linux-4.2.6/drivers/mfd/intel-lpss-pci.c	2015-12-05 13:39:19.630997238 +0000
+@@ -70,7 +70,52 @@
+ 	.clk_con_id = "baudclk",
+ };
+ 
++static const struct intel_lpss_platform_info bxt_info = {
++	.clk_rate = 100000000,
++};
++
++static const struct intel_lpss_platform_info bxt_uart_info = {
++	.clk_rate = 100000000,
++	.clk_con_id = "baudclk",
++};
++
++static const struct intel_lpss_platform_info bxt_i2c_info = {
++	.clk_rate = 133000000,
++};
++
+ static const struct pci_device_id intel_lpss_pci_ids[] = {
++	/* BXT */
++	{ PCI_VDEVICE(INTEL, 0x0aac), (kernel_ulong_t)&bxt_i2c_info },
++	{ PCI_VDEVICE(INTEL, 0x0aae), (kernel_ulong_t)&bxt_i2c_info },
++	{ PCI_VDEVICE(INTEL, 0x0ab0), (kernel_ulong_t)&bxt_i2c_info },
++	{ PCI_VDEVICE(INTEL, 0x0ab2), (kernel_ulong_t)&bxt_i2c_info },
++	{ PCI_VDEVICE(INTEL, 0x0ab4), (kernel_ulong_t)&bxt_i2c_info },
++	{ PCI_VDEVICE(INTEL, 0x0ab6), (kernel_ulong_t)&bxt_i2c_info },
++	{ PCI_VDEVICE(INTEL, 0x0ab8), (kernel_ulong_t)&bxt_i2c_info },
++	{ PCI_VDEVICE(INTEL, 0x0aba), (kernel_ulong_t)&bxt_i2c_info },
++	{ PCI_VDEVICE(INTEL, 0x0abc), (kernel_ulong_t)&bxt_uart_info },
++	{ PCI_VDEVICE(INTEL, 0x0abe), (kernel_ulong_t)&bxt_uart_info },
++	{ PCI_VDEVICE(INTEL, 0x0ac0), (kernel_ulong_t)&bxt_uart_info },
++	{ PCI_VDEVICE(INTEL, 0x0ac2), (kernel_ulong_t)&bxt_info },
++	{ PCI_VDEVICE(INTEL, 0x0ac4), (kernel_ulong_t)&bxt_info },
++	{ PCI_VDEVICE(INTEL, 0x0ac6), (kernel_ulong_t)&bxt_info },
++	{ PCI_VDEVICE(INTEL, 0x0aee), (kernel_ulong_t)&bxt_uart_info },
++	/* APL */
++	{ PCI_VDEVICE(INTEL, 0x5aac), (kernel_ulong_t)&bxt_i2c_info },
++	{ PCI_VDEVICE(INTEL, 0x5aae), (kernel_ulong_t)&bxt_i2c_info },
++	{ PCI_VDEVICE(INTEL, 0x5ab0), (kernel_ulong_t)&bxt_i2c_info },
++	{ PCI_VDEVICE(INTEL, 0x5ab2), (kernel_ulong_t)&bxt_i2c_info },
++	{ PCI_VDEVICE(INTEL, 0x5ab4), (kernel_ulong_t)&bxt_i2c_info },
++	{ PCI_VDEVICE(INTEL, 0x5ab6), (kernel_ulong_t)&bxt_i2c_info },
++	{ PCI_VDEVICE(INTEL, 0x5ab8), (kernel_ulong_t)&bxt_i2c_info },
++	{ PCI_VDEVICE(INTEL, 0x5aba), (kernel_ulong_t)&bxt_i2c_info },
++	{ PCI_VDEVICE(INTEL, 0x5abc), (kernel_ulong_t)&bxt_uart_info },
++	{ PCI_VDEVICE(INTEL, 0x5abe), (kernel_ulong_t)&bxt_uart_info },
++	{ PCI_VDEVICE(INTEL, 0x5ac0), (kernel_ulong_t)&bxt_uart_info },
++	{ PCI_VDEVICE(INTEL, 0x5ac2), (kernel_ulong_t)&bxt_info },
++	{ PCI_VDEVICE(INTEL, 0x5ac4), (kernel_ulong_t)&bxt_info },
++	{ PCI_VDEVICE(INTEL, 0x5ac6), (kernel_ulong_t)&bxt_info },
++	{ PCI_VDEVICE(INTEL, 0x5aee), (kernel_ulong_t)&bxt_uart_info },
+ 	/* SPT-LP */
+ 	{ PCI_VDEVICE(INTEL, 0x9d27), (kernel_ulong_t)&spt_uart_info },
+ 	{ PCI_VDEVICE(INTEL, 0x9d28), (kernel_ulong_t)&spt_uart_info },
+--- linux-4.2/include/linux/io-64-nonatomic-hi-lo.h	1970-01-01 01:00:00.000000000 +0100
++++ linux-4.2.6/include/linux/io-64-nonatomic-hi-lo.h	2015-12-05 13:39:19.634999238 +0000
+@@ -0,0 +1,32 @@
++#ifndef _LINUX_IO_64_NONATOMIC_HI_LO_H_
++#define _LINUX_IO_64_NONATOMIC_HI_LO_H_
++
++#include <linux/io.h>
++#include <asm-generic/int-ll64.h>
++
++static inline __u64 hi_lo_readq(const volatile void __iomem *addr)
++{
++	const volatile u32 __iomem *p = addr;
++	u32 low, high;
++
++	high = readl(p + 1);
++	low = readl(p);
++
++	return low + ((u64)high << 32);
++}
++
++static inline void hi_lo_writeq(__u64 val, volatile void __iomem *addr)
++{
++	writel(val >> 32, addr + 4);
++	writel(val, addr);
++}
++
++#ifndef readq
++#define readq hi_lo_readq
++#endif
++
++#ifndef writeq
++#define writeq hi_lo_writeq
++#endif
++
++#endif	/* _LINUX_IO_64_NONATOMIC_HI_LO_H_ */
+--- linux-4.2/include/linux/io-64-nonatomic-lo-hi.h	1970-01-01 01:00:00.000000000 +0100
++++ linux-4.2.6/include/linux/io-64-nonatomic-lo-hi.h	2015-12-05 13:39:19.634999238 +0000
+@@ -0,0 +1,32 @@
++#ifndef _LINUX_IO_64_NONATOMIC_LO_HI_H_
++#define _LINUX_IO_64_NONATOMIC_LO_HI_H_
++
++#include <linux/io.h>
++#include <asm-generic/int-ll64.h>
++
++static inline __u64 lo_hi_readq(const volatile void __iomem *addr)
++{
++	const volatile u32 __iomem *p = addr;
++	u32 low, high;
++
++	low = readl(p);
++	high = readl(p + 1);
++
++	return low + ((u64)high << 32);
++}
++
++static inline void lo_hi_writeq(__u64 val, volatile void __iomem *addr)
++{
++	writel(val, addr);
++	writel(val >> 32, addr + 4);
++}
++
++#ifndef readq
++#define readq lo_hi_readq
++#endif
++
++#ifndef writeq
++#define writeq lo_hi_writeq
++#endif
++
++#endif	/* _LINUX_IO_64_NONATOMIC_LO_HI_H_ */

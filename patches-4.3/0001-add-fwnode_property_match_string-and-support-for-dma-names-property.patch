@@ -1,0 +1,156 @@
+From: http://www.spinics.net/lists/linux-acpi/msg60539.html and msg60540.html
+
+diff -Naur linux-4.3.old/drivers/base/property.c linux-4.3/drivers/base/property.c
+--- linux-4.3.old/drivers/base/property.c	2015-12-16 10:05:57.312651594 +0000
++++ linux-4.3/drivers/base/property.c	2015-12-16 10:06:14.308651696 +0000
+@@ -287,6 +287,28 @@
+ }
+ EXPORT_SYMBOL_GPL(device_property_read_string);
+ 
++/**
++ * device_property_match_string - find a string in an array and return index
++ * @dev: Device to get the property of
++ * @propname: Name of the property holding the array
++ * @string: String to look for
++ *
++ * Find a given string in a string array and if it is found return the
++ * index back.
++ *
++ * Return: %0 if the property was found (success),
++ *	   %-EINVAL if given arguments are not valid,
++ *	   %-ENODATA if the property does not have a value,
++ *	   %-EPROTO if the property is not an array of strings,
++ *	   %-ENXIO if no suitable firmware interface is present.
++ */
++int device_property_match_string(struct device *dev, const char *propname,
++				 const char *string)
++{
++	return fwnode_property_match_string(dev_fwnode(dev), propname, string);
++}
++EXPORT_SYMBOL_GPL(device_property_match_string);
++
+ #define OF_DEV_PROP_READ_ARRAY(node, propname, type, val, nval) \
+ 	(val) ? of_property_read_##type##_array((node), (propname), (val), (nval)) \
+ 	      : of_property_count_elems_of_size((node), (propname), sizeof(type))
+@@ -479,6 +501,52 @@
+ EXPORT_SYMBOL_GPL(fwnode_property_read_string);
+ 
+ /**
++ * fwnode_property_match_string - find a string in an array and return index
++ * @fwnode: Firmware node to get the property of
++ * @propname: Name of the property holding the array
++ * @string: String to look for
++ *
++ * Find a given string in a string array and if it is found return the
++ * index back.
++ *
++ * Return: %0 if the property was found (success),
++ *	   %-EINVAL if given arguments are not valid,
++ *	   %-ENODATA if the property does not have a value,
++ *	   %-EPROTO if the property is not an array of strings,
++ *	   %-ENXIO if no suitable firmware interface is present.
++ */
++int fwnode_property_match_string(struct fwnode_handle *fwnode,
++	const char *propname, const char *string)
++{
++	const char **values;
++	int nval, ret, i;
++
++	nval = fwnode_property_read_string_array(fwnode, propname, NULL, 0);
++	if (nval < 0)
++		return nval;
++
++	values = kcalloc(nval, sizeof(*values), GFP_KERNEL);
++	if (!values)
++		return -ENOMEM;
++
++	ret = fwnode_property_read_string_array(fwnode, propname, values, nval);
++	if (ret < 0)
++		goto out;
++
++	ret = -ENODATA;
++	for (i = 0; i < nval; i++) {
++		if (!strcmp(values[i], string)) {
++			ret = i;
++			break;
++		}
++	}
++out:
++	kfree(values);
++	return ret;
++}
++EXPORT_SYMBOL_GPL(fwnode_property_match_string);
++
++/**
+  * device_get_next_child_node - Return the next child node handle for a device
+  * @dev: Device to find the next child node for.
+  * @child: Handle to one of the device's child nodes or a null handle.
+diff -Naur linux-4.3.old/drivers/dma/acpi-dma.c linux-4.3/drivers/dma/acpi-dma.c
+--- linux-4.3.old/drivers/dma/acpi-dma.c	2015-10-28 13:34:58.000000000 +0000
++++ linux-4.3/drivers/dma/acpi-dma.c	2015-12-16 10:06:23.116651748 +0000
+@@ -21,6 +21,7 @@
+ #include <linux/ioport.h>
+ #include <linux/acpi.h>
+ #include <linux/acpi_dma.h>
++#include <linux/property.h>
+ 
+ static LIST_HEAD(acpi_dma_list);
+ static DEFINE_MUTEX(acpi_dma_lock);
+@@ -413,21 +414,29 @@
+  * translate the names "tx" and "rx" here based on the most common case where
+  * the first FixedDMA descriptor is TX and second is RX.
+  *
++ * If the device has "dma-names" property the FixedDMA descriptor indices
++ * are retrieved based on those. Otherwise the function falls back using
++ * hardcoded indices.
++ *
+  * Return:
+  * Pointer to appropriate dma channel on success or an error pointer.
+  */
+ struct dma_chan *acpi_dma_request_slave_chan_by_name(struct device *dev,
+ 		const char *name)
+ {
+-	size_t index;
++	int index;
+ 
+-	if (!strcmp(name, "tx"))
+-		index = 0;
+-	else if (!strcmp(name, "rx"))
+-		index = 1;
+-	else
+-		return ERR_PTR(-ENODEV);
++	index = device_property_match_string(dev, "dma-names", name);
++	if (index < 0) {
++		if (!strcmp(name, "tx"))
++			index = 0;
++		else if (!strcmp(name, "rx"))
++			index = 1;
++		else
++			return ERR_PTR(-ENODEV);
++	}
+ 
++	dev_dbg(dev, "found DMA channel \"%s\" at index %d\n", name, index);
+ 	return acpi_dma_request_slave_chan_by_index(dev, index);
+ }
+ EXPORT_SYMBOL_GPL(acpi_dma_request_slave_chan_by_name);
+diff -Naur linux-4.3.old/include/linux/property.h linux-4.3/include/linux/property.h
+--- linux-4.3.old/include/linux/property.h	2015-12-16 10:05:57.312651594 +0000
++++ linux-4.3/include/linux/property.h	2015-12-16 10:06:14.308651696 +0000
+@@ -40,6 +40,8 @@
+ 				      const char **val, size_t nval);
+ int device_property_read_string(struct device *dev, const char *propname,
+ 				const char **val);
++int device_property_match_string(struct device *dev,
++				 const char *propname, const char *string);
+ 
+ bool fwnode_property_present(struct fwnode_handle *fwnode, const char *propname);
+ int fwnode_property_read_u8_array(struct fwnode_handle *fwnode,
+@@ -59,6 +61,8 @@
+ 				      size_t nval);
+ int fwnode_property_read_string(struct fwnode_handle *fwnode,
+ 				const char *propname, const char **val);
++int fwnode_property_match_string(struct fwnode_handle *fwnode,
++				 const char *propname, const char *string);
+ 
+ struct fwnode_handle *device_get_next_child_node(struct device *dev,
+ 						 struct fwnode_handle *child);

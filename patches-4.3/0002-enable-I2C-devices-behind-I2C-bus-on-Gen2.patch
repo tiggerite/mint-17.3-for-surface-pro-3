@@ -1,0 +1,340 @@
+From: https://www.spinics.net/lists/kernel/msg2091968.html
+
+diff -Naur linux-4.3.old/Documentation/acpi/enumeration.txt linux-4.3/Documentation/acpi/enumeration.txt
+--- linux-4.3.old/Documentation/acpi/enumeration.txt	2015-10-28 13:34:57.000000000 +0000
++++ linux-4.3/Documentation/acpi/enumeration.txt	2015-12-16 12:37:13.412705748 +0000
+@@ -347,13 +347,18 @@
+ resulting child platform device will have its ACPI_COMPANION() set to point
+ to the parent device.
+ 
+-If the ACPI namespace has a device that we can match using an ACPI id,
+-the id should be set like:
++If the ACPI namespace has a device that we can match using an ACPI id or ACPI
++adr, the cell should be set like:
++
++	static struct mfd_cell_acpi_match my_subdevice_cell_acpi_match = {
++		.pnpid = "XYZ0001",
++		.adr = 0,
++	};
+ 
+ 	static struct mfd_cell my_subdevice_cell = {
+ 		.name = "my_subdevice",
+ 		/* set the resources relative to the parent */
+-		.acpi_pnpid = "XYZ0001",
++		.acpi_match = &my_subdevice_cell_acpi_match,
+ 	};
+ 
+ The ACPI id "XYZ0001" is then used to lookup an ACPI device directly under
+diff -Naur linux-4.3.old/drivers/mfd/intel_quark_i2c_gpio.c linux-4.3/drivers/mfd/intel_quark_i2c_gpio.c
+--- linux-4.3.old/drivers/mfd/intel_quark_i2c_gpio.c	2015-10-28 13:34:59.000000000 +0000
++++ linux-4.3/drivers/mfd/intel_quark_i2c_gpio.c	2015-12-16 12:37:30.248705849 +0000
+@@ -31,6 +31,10 @@
+ #define MFD_I2C_BAR		0
+ #define MFD_GPIO_BAR		1
+ 
++/* ACPI _ADR value to match the child node */
++#define MFD_ACPI_MATCH_GPIO	0ULL
++#define MFD_ACPI_MATCH_I2C	1ULL
++
+ /* The base GPIO number under GPIOLIB framework */
+ #define INTEL_QUARK_MFD_GPIO_BASE	8
+ 
+@@ -82,27 +86,37 @@
+ 	},
+ };
+ 
++static struct mfd_cell_acpi_match intel_quark_acpi_match_i2c = {
++	.adr = MFD_ACPI_MATCH_I2C,
++};
++
+ static struct resource intel_quark_gpio_res[] = {
+ 	[INTEL_QUARK_IORES_MEM] = {
+ 		.flags = IORESOURCE_MEM,
+ 	},
+ };
+ 
++static struct mfd_cell_acpi_match intel_quark_acpi_match_gpio = {
++	.adr = MFD_ACPI_MATCH_GPIO,
++};
++
+ static struct mfd_cell intel_quark_mfd_cells[] = {
+ 	{
+-		.id = MFD_I2C_BAR,
+-		.name = "i2c_designware",
+-		.num_resources = ARRAY_SIZE(intel_quark_i2c_res),
+-		.resources = intel_quark_i2c_res,
+-		.ignore_resource_conflicts = true,
+-	},
+-	{
+ 		.id = MFD_GPIO_BAR,
+ 		.name = "gpio-dwapb",
++		.acpi_match = &intel_quark_acpi_match_gpio,
+ 		.num_resources = ARRAY_SIZE(intel_quark_gpio_res),
+ 		.resources = intel_quark_gpio_res,
+ 		.ignore_resource_conflicts = true,
+ 	},
++	{
++		.id = MFD_I2C_BAR,
++		.name = "i2c_designware",
++		.acpi_match = &intel_quark_acpi_match_i2c,
++		.num_resources = ARRAY_SIZE(intel_quark_i2c_res),
++		.resources = intel_quark_i2c_res,
++		.ignore_resource_conflicts = true,
++	},
+ };
+ 
+ static const struct pci_device_id intel_quark_mfd_ids[] = {
+@@ -248,12 +262,11 @@
+ 
+ 	dev_set_drvdata(&pdev->dev, quark_mfd);
+ 
+-	ret = intel_quark_i2c_setup(pdev, &intel_quark_mfd_cells[MFD_I2C_BAR]);
++	ret = intel_quark_i2c_setup(pdev, &intel_quark_mfd_cells[1]);
+ 	if (ret)
+ 		return ret;
+ 
+-	ret = intel_quark_gpio_setup(pdev,
+-				     &intel_quark_mfd_cells[MFD_GPIO_BAR]);
++	ret = intel_quark_gpio_setup(pdev, &intel_quark_mfd_cells[0]);
+ 	if (ret)
+ 		return ret;
+ 
+diff -Naur linux-4.3.old/drivers/mfd/mfd-core.c linux-4.3/drivers/mfd/mfd-core.c
+--- linux-4.3.old/drivers/mfd/mfd-core.c	2015-10-28 13:34:59.000000000 +0000
++++ linux-4.3/drivers/mfd/mfd-core.c	2015-12-16 12:37:13.412705748 +0000
+@@ -82,29 +82,49 @@
+ static void mfd_acpi_add_device(const struct mfd_cell *cell,
+ 				struct platform_device *pdev)
+ {
+-	struct acpi_device *parent_adev;
++	const struct mfd_cell_acpi_match *match = cell->acpi_match;
++	struct acpi_device *parent, *child;
+ 	struct acpi_device *adev;
+ 
+-	parent_adev = ACPI_COMPANION(pdev->dev.parent);
+-	if (!parent_adev)
++	parent = ACPI_COMPANION(pdev->dev.parent);
++	if (!parent)
+ 		return;
+ 
+ 	/*
+-	 * MFD child device gets its ACPI handle either from the ACPI
+-	 * device directly under the parent that matches the acpi_pnpid or
+-	 * it will use the parent handle if is no acpi_pnpid is given.
++	 * MFD child device gets its ACPI handle either from the ACPI device
++	 * directly under the parent that matches the either _HID or _CID, or
++	 * _ADR or it will use the parent handle if is no ID is given.
++	 *
++	 * Note that use of _ADR is a grey area in the ACPI specification,
++	 * though Intel Galileo Gen2 is using it to distinguish the children
++	 * devices.
+ 	 */
+-	adev = parent_adev;
+-	if (cell->acpi_pnpid) {
+-		struct acpi_device_id ids[2] = {};
+-		struct acpi_device *child_adev;
++	adev = parent;
++	if (match) {
++		if (match->pnpid) {
++			struct acpi_device_id ids[2] = {};
+ 
+-		strlcpy(ids[0].id, cell->acpi_pnpid, sizeof(ids[0].id));
+-		list_for_each_entry(child_adev, &parent_adev->children, node)
+-			if (acpi_match_device_ids(child_adev, ids)) {
+-				adev = child_adev;
+-				break;
++			strlcpy(ids[0].id, match->pnpid, sizeof(ids[0].id));
++			list_for_each_entry(child, &parent->children, node) {
++				if (acpi_match_device_ids(child, ids)) {
++					adev = child;
++					break;
++				}
+ 			}
++		} else {
++			unsigned long long adr;
++			acpi_status status;
++
++			list_for_each_entry(child, &parent->children, node) {
++				status = acpi_evaluate_integer(child->handle,
++							       "_ADR", NULL,
++							       &adr);
++				if (ACPI_SUCCESS(status) && match->adr == adr) {
++					adev = child;
++					break;
++				}
++			}
++		}
+ 	}
+ 
+ 	ACPI_COMPANION_SET(&pdev->dev, adev);
+diff -Naur linux-4.3.old/drivers/misc/eeprom/at24.c linux-4.3/drivers/misc/eeprom/at24.c
+--- linux-4.3.old/drivers/misc/eeprom/at24.c	2015-12-02 01:21:06.000000000 +0000
++++ linux-4.3/drivers/misc/eeprom/at24.c	2015-12-16 12:37:38.548705898 +0000
+@@ -21,6 +21,7 @@
+ #include <linux/bitops.h>
+ #include <linux/jiffies.h>
+ #include <linux/of.h>
++#include <linux/acpi.h>
+ #include <linux/i2c.h>
+ #include <linux/platform_data/at24.h>
+ 
+@@ -131,6 +132,12 @@
+ };
+ MODULE_DEVICE_TABLE(i2c, at24_ids);
+ 
++static const struct acpi_device_id at24_acpi_ids[] = {
++	{ "INT3499", AT24_DEVICE_MAGIC(8192 / 8, 0) },
++	{ }
++};
++MODULE_DEVICE_TABLE(acpi, at24_acpi_ids);
++
+ /*-------------------------------------------------------------------------*/
+ 
+ /*
+@@ -467,21 +474,29 @@
+ static int at24_probe(struct i2c_client *client, const struct i2c_device_id *id)
+ {
+ 	struct at24_platform_data chip;
++	kernel_ulong_t magic = 0;
+ 	bool writable;
+ 	int use_smbus = 0;
+ 	int use_smbus_write = 0;
+ 	struct at24_data *at24;
+ 	int err;
+ 	unsigned i, num_addresses;
+-	kernel_ulong_t magic;
+ 
+ 	if (client->dev.platform_data) {
+ 		chip = *(struct at24_platform_data *)client->dev.platform_data;
+ 	} else {
+-		if (!id->driver_data)
++		if (id) {
++			magic = id->driver_data;
++		} else {
++			const struct acpi_device_id *aid;
++
++			aid = acpi_match_device(at24_acpi_ids, &client->dev);
++			if (aid)
++				magic = aid->driver_data;
++		}
++		if (!magic)
+ 			return -ENODEV;
+ 
+-		magic = id->driver_data;
+ 		chip.byte_len = BIT(magic & AT24_BITMASK(AT24_SIZE_BYTELEN));
+ 		magic >>= AT24_SIZE_BYTELEN;
+ 		chip.flags = magic & AT24_BITMASK(AT24_SIZE_FLAGS);
+@@ -661,6 +676,7 @@
+ static struct i2c_driver at24_driver = {
+ 	.driver = {
+ 		.name = "at24",
++		.acpi_match_table = ACPI_PTR(at24_acpi_ids),
+ 	},
+ 	.probe = at24_probe,
+ 	.remove = at24_remove,
+diff -Naur linux-4.3.old/drivers/pwm/Kconfig linux-4.3/drivers/pwm/Kconfig
+--- linux-4.3.old/drivers/pwm/Kconfig	2015-12-09 13:31:08.000000000 +0000
++++ linux-4.3/drivers/pwm/Kconfig	2015-12-16 12:37:46.984705949 +0000
+@@ -242,7 +242,7 @@
+ 
+ config PWM_PCA9685
+ 	tristate "NXP PCA9685 PWM driver"
+-	depends on OF && I2C
++	depends on I2C
+ 	select REGMAP_I2C
+ 	help
+ 	  Generic PWM framework driver for NXP PCA9685 LED controller.
+diff -Naur linux-4.3.old/drivers/pwm/pwm-pca9685.c linux-4.3/drivers/pwm/pwm-pca9685.c
+--- linux-4.3.old/drivers/pwm/pwm-pca9685.c	2015-12-02 01:21:07.000000000 +0000
++++ linux-4.3/drivers/pwm/pwm-pca9685.c	2015-12-16 12:37:46.988705949 +0000
+@@ -19,9 +19,11 @@
+  * this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
++#include <linux/acpi.h>
+ #include <linux/i2c.h>
+ #include <linux/module.h>
+ #include <linux/platform_device.h>
++#include <linux/property.h>
+ #include <linux/pwm.h>
+ #include <linux/regmap.h>
+ #include <linux/slab.h>
+@@ -297,7 +299,6 @@
+ static int pca9685_pwm_probe(struct i2c_client *client,
+ 				const struct i2c_device_id *id)
+ {
+-	struct device_node *np = client->dev.of_node;
+ 	struct pca9685 *pca;
+ 	int ret;
+ 	int mode2;
+@@ -320,12 +321,12 @@
+ 
+ 	regmap_read(pca->regmap, PCA9685_MODE2, &mode2);
+ 
+-	if (of_property_read_bool(np, "invert"))
++	if (device_property_read_bool(&client->dev, "invert"))
+ 		mode2 |= MODE2_INVRT;
+ 	else
+ 		mode2 &= ~MODE2_INVRT;
+ 
+-	if (of_property_read_bool(np, "open-drain"))
++	if (device_property_read_bool(&client->dev, "open-drain"))
+ 		mode2 &= ~MODE2_OUTDRV;
+ 	else
+ 		mode2 |= MODE2_OUTDRV;
+@@ -363,16 +364,27 @@
+ };
+ MODULE_DEVICE_TABLE(i2c, pca9685_id);
+ 
++#ifdef CONFIG_ACPI
++static const struct acpi_device_id pca9685_acpi_ids[] = {
++	{ "INT3492", 0 },
++	{ /* sentinel */ },
++};
++MODULE_DEVICE_TABLE(acpi, pca9685_acpi_ids);
++#endif
++
++#ifdef CONFIG_OF
+ static const struct of_device_id pca9685_dt_ids[] = {
+ 	{ .compatible = "nxp,pca9685-pwm", },
+ 	{ /* sentinel */ }
+ };
+ MODULE_DEVICE_TABLE(of, pca9685_dt_ids);
++#endif
+ 
+ static struct i2c_driver pca9685_i2c_driver = {
+ 	.driver = {
+ 		.name = "pca9685-pwm",
+-		.of_match_table = pca9685_dt_ids,
++		.acpi_match_table = ACPI_PTR(pca9685_acpi_ids),
++		.of_match_table = of_match_ptr(pca9685_dt_ids),
+ 	},
+ 	.probe = pca9685_pwm_probe,
+ 	.remove = pca9685_pwm_remove,
+diff -Naur linux-4.3.old/include/linux/mfd/core.h linux-4.3/include/linux/mfd/core.h
+--- linux-4.3.old/include/linux/mfd/core.h	2015-10-28 13:35:00.000000000 +0000
++++ linux-4.3/include/linux/mfd/core.h	2015-12-16 12:37:13.412705748 +0000
+@@ -18,6 +18,12 @@
+ 
+ struct irq_domain;
+ 
++/* Matches ACPI PNP id, either _HID or _CID, or ACPI _ADR */
++struct mfd_cell_acpi_match {
++	const char			*pnpid;
++	const unsigned long long	adr;
++};
++
+ /*
+  * This struct describes the MFD part ("cell").
+  * After registration the copy of this structure will become the platform data
+@@ -44,8 +50,8 @@
+ 	 */
+ 	const char		*of_compatible;
+ 
+-	/* Matches ACPI PNP id, either _HID or _CID */
+-	const char		*acpi_pnpid;
++	/* Matches ACPI */
++	const struct mfd_cell_acpi_match	*acpi_match;
+ 
+ 	/*
+ 	 * These resources can be specified relative to the parent device.

@@ -1,3 +1,5 @@
+From: http://www.spinics.net/lists/linux-input/msg41021.html (with quirk)
+
 --- linux-4.2.old/drivers/hid/hid-ids.h	2015-12-06 17:27:02.044661444 +0000
 +++ linux-4.2/drivers/hid/hid-ids.h	2015-12-06 17:27:14.188662056 +0000
 @@ -713,6 +713,7 @@
