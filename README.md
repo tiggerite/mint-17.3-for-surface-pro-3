@@ -2,7 +2,7 @@ Linux Mint 17.3 for the Surface Pro 3
 
 Here are the scripts and patches necessary to build the kernel from the customized LiveCD that is on my Google Drive (links below).
 
-To compile, simply run ./build_kernel_4.2.6.sh - it takes about an hour on my SP3 i7.
+To compile, simply run ./build_kernel_4.2.6.sh - it takes about an hour on my SP3 i7. Alternatively, to build the beta version, run ./build_kernel_4.3.sh instead.
 
 If you then want to make your own LiveCD, firstly download the ISO file from a mirror, e.g. http://www.mirrorservice.org/sites/www.linuxmint.com/pub/linuxmint.com//stable/17.3/linuxmint-17.3-cinnamon-64bit.iso
 
@@ -48,7 +48,7 @@ rm *.deb
 rm -Rf mrvl
 ```
 
-When installing the 4.2.0-19 kernel-image debs, although the virtualbox module will now build without a hitch, the ndiswrapper one will not, causing the system to spit out a warning. As you have downloaded the Surface wifi drivers and integrated them into the kernel, ndiswrapper isn't needed, and this can be safely ignored.
+When installing the 4.2.0-19 (or 4.3.0-4 if using the beta) kernel-image debs, although the virtualbox module will now build without a hitch, the ndiswrapper one will not, causing the system to spit out a warning. As you have downloaded the Surface wifi drivers and integrated them into the kernel, ndiswrapper isn't needed, and this can be safely ignored.
 
 Now, let's tidy up the ISO image by removing the bundled version:
 
@@ -94,6 +94,8 @@ You can now exit the chroot. Once control passes back to JLIVECD, be sure to ent
 ......Enter the kernel version (take your time on this one): 4.2.0-19-generic
 ```
 
+(with the beta, this should be 4.3.0-4-generic)
+
 Now let JLIVECD finish, but delete the generated ISO file, as you need to generate it differently for UEFI support. You can substitute linuxmint-17.3-cinnamon-x64-sp3-RC1.iso in both commands with whatever you choose, as long as they match.
 
 ```
@@ -104,7 +106,7 @@ sudo isohybrid --uefi linuxmint-17.3-cinnamon-x64-sp3.iso
 ```
 
 
-The link to the final LiveCD on my Google Drive: https://drive.google.com/file/d/0B0E-zt0RT0Y_azVWU0JqRTRYZXc/view?usp=sharing
+The link to the final LiveCD on my Google Drive (with the latest Beta in its own sub-folder): https://drive.google.com/drive/folders/0B0E-zt0RT0Y_OFltXzJSYTBtU1k
 
-The folder for the compiled 4.2.0-19.23 kernel debs and linux-firmware_1.127.18_all.deb on my Google Drive: https://drive.google.com/folderview?id=0B0E-zt0RT0Y_TElxbHN6R1d2V3M&usp=sharing
+The folder for the compiled 4.2.0-19.23 kernel debs and linux-firmware_1.127.18_all.deb on my Google Drive: https://drive.google.com/drive/folders/0B0E-zt0RT0Y_TElxbHN6R1d2V3M and the 4.3.0-4 debs: https://drive.google.com/drive/folders/0B0E-zt0RT0Y_b3M3YkxBSnBpblk
 
