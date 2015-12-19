@@ -1,8 +1,8 @@
 # download sources
-wget --quiet https://launchpad.net/ubuntu/+archive/primary/+files/linux_4.3.0-4.13.tar.gz
+wget --quiet https://launchpad.net/ubuntu/+archive/primary/+files/linux_4.3.0-5.16.tar.gz
 
 # decompress
-tar xf linux_4.3.0-4.13.tar.gz
+tar xf linux_4.3.0-5.16.tar.gz
 mv ubuntu-xenial linux-4.3
 
 # apply patches
@@ -26,7 +26,6 @@ patch -p1 --ignore-whitespace -i ../patches/allow-shared-GPIO-event-to-be-read-v
 patch -p1 --ignore-whitespace -i ../patches/remove-duplicate-definitions.patch
 patch -p1 --ignore-whitespace -i ../patches/fix-system-hangup-on-BYT,BSW,CHT.patch
 patch -p1 --ignore-whitespace -i ../patches/fix-system-hangup-config.patch
-patch -p1 --ignore-whitespace -i ../patches/fix-system-hangup-oldmodule.patch
 patch -p1 --ignore-whitespace -i ../patches/0001-add-fwnode_property_match_string-and-support-for-dma-names-property.patch
 patch -p1 --ignore-whitespace -i ../patches/0002-enable-I2C-devices-behind-I2C-bus-on-Gen2.patch
 patch -p1 --ignore-whitespace -i ../patches/0003-hierarchical-properties-support.patch
@@ -34,7 +33,11 @@ patch -p1 --ignore-whitespace -i ../patches/0004-setting-up-DMA-coherency-for-PC
 patch -p1 --ignore-whitespace -i ../patches/0005-fix-subnode-lookup-scope-for-data-only-subnodes.patch
 patch -p1 --ignore-whitespace -i ../patches/0006-code-duplication-removal-and-cleanups.patch
 patch -p1 --ignore-whitespace -i ../patches/0007-support-non-ACPI-platforms.patch
-patch -p1 --ignore-whitespace -i ../patches/version.patch
+
+sed -i '/^iosf_mbi$/d' debian.master/abi/4.3.0-*/amd64/generic.modules
+sed -i 's/4.3.0-5.16)/4.3.0-5.16~14.04.3)/g' debian.master/changelog
+sed -i 's/SUBLEVEL = 3/SUBLEVEL = 0/' Makefile
+sed -i 's/EXTRAVERSION =/EXTRAVERSION = -5/' Makefile
 
 # update execute flags
 chmod a+x debian/rules
@@ -43,5 +46,4 @@ chmod a+x debian/scripts/misc/*
 
 # compile kernel
 fakeroot debian/rules clean
-sed -i 's/4.3.0-4.13)/4.3.0-4.13~14.04.3)/g' debian/changelog
 fakeroot debian/rules binary-headers binary-generic
