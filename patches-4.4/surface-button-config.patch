@@ -1,0 +1,12 @@
+diff -Naur linux-4.4-rc7.old/debian.master/config/config.common.ubuntu linux-4.4-rc7/debian.master/config/config.common.ubuntu
+--- linux-4.4-rc7.old/debian.master/config/config.common.ubuntu	2016-01-03 14:25:24.612080367 +0000
++++ linux-4.4-rc7/debian.master/config/config.common.ubuntu	2016-01-03 14:30:57.680071781 +0000
+@@ -7622,7 +7622,7 @@
+ CONFIG_SUNRPC_SWAP=y
+ CONFIG_SUNRPC_XPRT_RDMA=m
+ # CONFIG_SUNXI_SRAM is not set
+-CONFIG_SURFACE_PRO3_BUTTON=m
++CONFIG_SURFACE_PRO_BUTTON=m
+ CONFIG_SUSPEND=y
+ CONFIG_SUSPEND_FREEZER=y
+ # CONFIG_SUSPEND_SKIP_SYNC is not set

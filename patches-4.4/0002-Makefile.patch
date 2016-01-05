@@ -1,0 +1,58 @@
+--- drm-intel/Makefile	2016-01-04 10:32:50.485352704 +0000
++++ linux-4.4-rc7/Makefile	2016-01-03 17:57:13.311752750 +0000
+@@ -366,6 +366,12 @@
+ AFLAGS_KERNEL	=
+ CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
+ 
++# Prefer linux-backports-modules
++ifneq ($(KBUILD_SRC),)
++ifneq ($(shell if test -e $(KBUILD_OUTPUT)/ubuntu-build; then echo yes; fi),yes)
++UBUNTUINCLUDE := -I/usr/src/linux-headers-lbm-$(KERNELRELEASE)
++endif
++endif
+ 
+ # Use USERINCLUDE when you must reference the UAPI directories only.
+ USERINCLUDE    := \
+@@ -378,6 +384,7 @@
+ # Use LINUXINCLUDE when you must reference the include/ directory.
+ # Needed to be compatible with the O= option
+ LINUXINCLUDE    := \
++		$(UBUNTUINCLUDE) \
+ 		-I$(srctree)/arch/$(hdr-arch)/include \
+ 		-Iarch/$(hdr-arch)/include/generated/uapi \
+ 		-Iarch/$(hdr-arch)/include/generated \
+@@ -385,6 +392,9 @@
+ 		-Iinclude \
+ 		$(USERINCLUDE)
+ 
++# UBUNTU: Include our third party driver stuff too
++LINUXINCLUDE   += -Iubuntu/include $(if $(KBUILD_SRC),-I$(srctree)/ubuntu/include)
++
+ KBUILD_CPPFLAGS := -D__KERNEL__
+ 
+ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
+@@ -546,7 +556,7 @@
+ 
+ # Objects we will link into vmlinux / subdirs we need to visit
+ init-y		:= init/
+-drivers-y	:= drivers/ sound/ firmware/
++drivers-y	:= drivers/ sound/ firmware/ ubuntu/
+ net-y		:= net/
+ libs-y		:= lib/
+ core-y		:= usr/
+@@ -1060,6 +1070,7 @@
+ 	  $(error Headers not exportable for the $(SRCARCH) architecture))
+ 	$(Q)$(MAKE) $(hdr-inst)=include/uapi
+ 	$(Q)$(MAKE) $(hdr-inst)=arch/$(hdr-arch)/include/uapi/asm $(hdr-dst)
++	$(Q)$(MAKE) $(hdr-inst)=ubuntu/include dst=include oldheaders=
+ 
+ PHONY += headers_check_all
+ headers_check_all: headers_install_all
+@@ -1069,6 +1080,7 @@
+ headers_check: headers_install
+ 	$(Q)$(MAKE) $(hdr-inst)=include/uapi HDRCHECK=1
+ 	$(Q)$(MAKE) $(hdr-inst)=arch/$(hdr-arch)/include/uapi/asm $(hdr-dst) HDRCHECK=1
++	$(Q)$(MAKE) $(hdr-inst)=ubuntu/include dst=include oldheaders= HDRCHECK=1
+ 
+ # ---------------------------------------------------------------------------
+ # Kernel selftest

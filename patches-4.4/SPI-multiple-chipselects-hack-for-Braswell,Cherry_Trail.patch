@@ -1,0 +1,128 @@
+--- a/drivers/spi/spi-pxa2xx.c	
++++ a/drivers/spi/spi-pxa2xx.c	
+@@ -65,8 +65,6 @@ MODULE_ALIAS("platform:pxa2xx-spi");
+ #define LPSS_GENERAL_REG_RXTO_HOLDOFF_DISABLE	BIT(24)
+ #define LPSS_CS_CONTROL_SW_MODE			BIT(0)
+ #define LPSS_CS_CONTROL_CS_HIGH			BIT(1)
+-#define LPSS_CS_CONTROL_CS_SEL_SHIFT		8
+-#define LPSS_CS_CONTROL_CS_SEL_MASK		(3 << LPSS_CS_CONTROL_CS_SEL_SHIFT)
+ #define LPSS_CAPS_CS_EN_SHIFT			9
+ #define LPSS_CAPS_CS_EN_MASK			(0xf << LPSS_CAPS_CS_EN_SHIFT)
+ 
+@@ -82,6 +80,10 @@ struct lpss_config {
+ 	u32 rx_threshold;
+ 	u32 tx_threshold_lo;
+ 	u32 tx_threshold_hi;
++	/* CS control */
++	size_t num_chipselect;
++	u32 cs_control_shift;
++	u32 cs_control_mask;
+ };
+ 
+ /* Keep these sorted with enum pxa_ssp_type */
+@@ -106,6 +108,19 @@ static const struct lpss_config lpss_platforms[] = {
+ 		.tx_threshold_lo = 160,
+ 		.tx_threshold_hi = 224,
+ 	},
++	{	/* LPSS_BSW_SSP */
++		.offset = 0x400,
++		.reg_general = 0x08,
++		.reg_ssp = 0x0c,
++		.reg_cs_ctrl = 0x18,
++		.reg_capabilities = -1,
++		.rx_threshold = 64,
++		.tx_threshold_lo = 160,
++		.tx_threshold_hi = 224,
++		.num_chipselect = 2,
++		.cs_control_shift = 2,
++		.cs_control_mask = 1 << 2,
++	},
+ 	{	/* LPSS_SPT_SSP */
+ 		.offset = 0x200,
+ 		.reg_general = -1,
+@@ -115,6 +130,8 @@ static const struct lpss_config lpss_platforms[] = {
+ 		.rx_threshold = 1,
+ 		.tx_threshold_lo = 32,
+ 		.tx_threshold_hi = 56,
++		.cs_control_shift = 8,
++		.cs_control_mask = 3 << 8,
+ 	},
+ 	{	/* LPSS_BXT_SSP */
+ 		.offset = 0x200,
+@@ -125,6 +142,8 @@ static const struct lpss_config lpss_platforms[] = {
+ 		.rx_threshold = 1,
+ 		.tx_threshold_lo = 16,
+ 		.tx_threshold_hi = 48,
++		.cs_control_shift = 8,
++		.cs_control_mask = 3 << 8,
+ 	},
+ };
+ 
+@@ -139,6 +158,7 @@ static bool is_lpss_ssp(const struct driver_data *drv_data)
+ 	switch (drv_data->ssp_type) {
+ 	case LPSS_LPT_SSP:
+ 	case LPSS_BYT_SSP:
++	case LPSS_BSW_SSP:
+ 	case LPSS_SPT_SSP:
+ 	case LPSS_BXT_SSP:
+ 		return true;
+@@ -298,8 +318,8 @@ static void lpss_ssp_cs_control(struct driver_data *drv_data, bool enable)
+ 	value = __lpss_ssp_read_priv(drv_data, config->reg_cs_ctrl);
+ 	if (enable) {
+ 		cs = drv_data->cur_msg->spi->chip_select;
+-		cs <<= LPSS_CS_CONTROL_CS_SEL_SHIFT;
+-		if (cs != (value & LPSS_CS_CONTROL_CS_SEL_MASK)) {
++		cs <<= config->cs_control_shift;
++		if (cs != (value & config->cs_control_mask)) {
+ 			/*
+ 			 * When switching another chip select output active
+ 			 * the output must be selected first and wait 2 ssp_clk
+@@ -308,7 +328,7 @@ static void lpss_ssp_cs_control(struct driver_data *drv_data, bool enable)
+ 			 * select since output select is latched but state
+ 			 * control is not.
+ 			 */
+-			value &= ~LPSS_CS_CONTROL_CS_SEL_MASK;
++			value &= ~config->cs_control_mask;
+ 			value |= cs;
+ 			__lpss_ssp_write_priv(drv_data,
+ 					      config->reg_cs_ctrl, value);
+@@ -1313,7 +1333,7 @@ static const struct acpi_device_id pxa2xx_spi_acpi_match[] = {
+ 	{ "INT3430", LPSS_LPT_SSP },
+ 	{ "INT3431", LPSS_LPT_SSP },
+ 	{ "80860F0E", LPSS_BYT_SSP },
+-	{ "8086228E", LPSS_BYT_SSP },
++	{ "8086228E", LPSS_BSW_SSP },
+ 	{ },
+ };
+ MODULE_DEVICE_TABLE(acpi, pxa2xx_spi_acpi_match);
+@@ -1567,9 +1587,6 @@ static int pxa2xx_spi_probe(struct platform_device *pdev)
+ 	if (!is_quark_x1000_ssp(drv_data))
+ 		pxa2xx_spi_write(drv_data, SSPSP, 0);
+ 
+-	if (is_lpss_ssp(drv_data))
+-		lpss_ssp_setup(drv_data);
+-
+ 	if (is_lpss_ssp(drv_data)) {
+ 		lpss_ssp_setup(drv_data);
+ 		config = lpss_get_config(drv_data);
+@@ -1579,6 +1596,8 @@ static int pxa2xx_spi_probe(struct platform_device *pdev)
+ 			tmp &= LPSS_CAPS_CS_EN_MASK;
+ 			tmp >>= LPSS_CAPS_CS_EN_SHIFT;
+ 			platform_info->num_chipselect = ffz(tmp);
++		} else if (config->num_chipselect) {
++			platform_info->num_chipselect = config->num_chipselect;
+ 		}
+ 	}
+ 	master->num_chipselect = platform_info->num_chipselect;
+diff --git a/include/linux/pxa2xx_ssp.h b/include/linux/pxa2xx_ssp.h
+index c2f2574ff61c..2a097d176ba9 100644
+--- a/include/linux/pxa2xx_ssp.h
++++ b/include/linux/pxa2xx_ssp.h
+@@ -197,6 +197,7 @@ enum pxa_ssp_type {
+ 	QUARK_X1000_SSP,
+ 	LPSS_LPT_SSP, /* Keep LPSS types sorted with lpss_platforms[] */
+ 	LPSS_BYT_SSP,
++	LPSS_BSW_SSP,
+ 	LPSS_SPT_SSP,
+ 	LPSS_BXT_SSP,
+ };
