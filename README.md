@@ -48,7 +48,7 @@ rm *.deb
 rm -Rf mrvl
 ```
 
-When installing the 4.2.0-19 (or 4.3.0-5 if using the beta) kernel-image debs, although the virtualbox module will now build without a hitch, the ndiswrapper one will not, causing the system to spit out a warning. As you have downloaded the Surface wifi drivers and integrated them into the kernel, ndiswrapper isn't needed, and this can be safely ignored.
+When installing the 4.2.0-19 (or 4.4.0-rc8 if using the beta) kernel-image debs, although the virtualbox module will now build without a hitch, the ndiswrapper one will not, causing the system to spit out a warning. As you have downloaded the Surface wifi drivers and integrated them into the kernel, ndiswrapper isn't needed, and this can be safely ignored.
 
 Now, let's tidy up the ISO image by removing the bundled version:
 
@@ -94,19 +94,19 @@ You can now exit the chroot. Once control passes back to JLIVECD, be sure to ent
 ......Enter the kernel version (take your time on this one): 4.2.0-19-generic
 ```
 
-(with the beta, this should be 4.3.0-5-generic)
+(with the beta, this should be 4.4.0-rc8-generic)
 
-Now let JLIVECD finish, but delete the generated ISO file, as you need to generate it differently for UEFI support. You can substitute linuxmint-17.3-cinnamon-x64-sp3-RC1.iso in both commands with whatever you choose, as long as they match.
+Now let JLIVECD finish, but delete the generated ISO file, as you need to generate it differently for UEFI support. You can substitute linuxmint-17.3-cinnamon-x64-surface.iso in both commands with whatever you choose, as long as they match.
 
 ```
 cd ~/mylivecd/extracted
-sudo mkisofs -U -A "LinuxMint_64" -V "LinuxMint_64" -volset "LinuxMint_64" -J -joliet-long -r -v -T -o "../linuxmint-17.3-cinnamon-x64-sp3.iso" -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e boot/grub/efi.img -no-emul-boot .
+sudo mkisofs -U -A "LinuxMint_64" -V "LinuxMint_64" -volset "LinuxMint_64" -J -joliet-long -r -v -T -o "../linuxmint-17.3-cinnamon-x64-surface.iso" -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e boot/grub/efi.img -no-emul-boot .
 cd ..
-sudo isohybrid --uefi linuxmint-17.3-cinnamon-x64-sp3.iso
+sudo isohybrid --uefi linuxmint-17.3-cinnamon-x64-surface.iso
 ```
 
 
 The link to the final LiveCD on my Google Drive (with the latest Beta in its own sub-folder): https://drive.google.com/drive/folders/0B0E-zt0RT0Y_OFltXzJSYTBtU1k
 
-The folder for the compiled 4.2.0-19.23 kernel debs and linux-firmware_1.127.18_all.deb on my Google Drive: https://drive.google.com/drive/folders/0B0E-zt0RT0Y_TElxbHN6R1d2V3M and the 4.3.0-5.16 debs: https://drive.google.com/drive/folders/0B0E-zt0RT0Y_b3M3YkxBSnBpblk
+The folder for the compiled 4.2.0-19.23 kernel debs and linux-firmware_1.127.18_all.deb on my Google Drive: https://drive.google.com/drive/folders/0B0E-zt0RT0Y_TElxbHN6R1d2V3M and the 4.4.0-rc8.7 debs: https://drive.google.com/drive/folders/0B0E-zt0RT0Y_R3NvTjRvTGlDLVk
 
