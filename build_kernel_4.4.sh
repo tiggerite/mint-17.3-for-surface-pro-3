@@ -42,7 +42,6 @@ patch -p1 --ignore-whitespace -i ../patches/surface-cam.patch
 patch -p1 --ignore-whitespace -i ../patches/surface-button.patch
 patch -p1 --ignore-whitespace -i ../patches/surface-button-config.patch
 patch -p1 --ignore-whitespace -i ../patches/uvcvideo-Enable-UVC-1.5-device-detection.patch
-patch -p1 --ignore-whitespace -i ../patches/wacom-rollback.patch -R
 patch -p1 --ignore-whitespace -i ../patches/HID-multitouch-Ignore-invalid-reports.patch
 patch -p1 --ignore-whitespace -i ../patches/HID-multitouch-Add-MT_QUIRK_NOT_SEEN_MEANS_UP-to-MT_.patch
 patch -p1 --ignore-whitespace -i ../patches/enable-rx-workqueue-when-rx-pending-is-high.patch
